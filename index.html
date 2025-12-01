@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>장기 - 한국 장기</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Formation Selection Modal -->
+    <div id="formation-modal" class="modal">
+        <div class="modal-content">
+            <h2>게임 설정</h2>
+
+            <!-- Player Side Selection -->
+            <div class="formation-section">
+                <h3>플레이어 선택</h3>
+                <div class="side-options">
+                    <button class="side-btn" data-side="cho">
+                        <div class="side-name">초 (선공)</div>
+                        <div class="side-desc">파란색 기물</div>
+                    </button>
+                    <button class="side-btn" data-side="han">
+                        <div class="side-name">한 (후공)</div>
+                        <div class="side-desc">빨간색 기물</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI Difficulty Selection -->
+            <div class="formation-section">
+                <h3>AI 난이도</h3>
+                <div class="difficulty-options">
+                    <select id="ai-difficulty" class="difficulty-select">
+                        <option value="1">18급 (초보)</option>
+                        <option value="2">17급</option>
+                        <option value="2">16급</option>
+                        <option value="2">15급</option>
+                        <option value="3">14급</option>
+                        <option value="3">13급</option>
+                        <option value="3">12급</option>
+                        <option value="3">11급</option>
+                        <option value="3">10급</option>
+                        <option value="4">9급</option>
+                        <option value="4">8급</option>
+                        <option value="4">7급</option>
+                        <option value="4">6급</option>
+                        <option value="4">5급</option>
+                        <option value="5">4급</option>
+                        <option value="5">3급</option>
+                        <option value="5">2급</option>
+                        <option value="5">1급</option>
+                        <option value="6">1단</option>
+                        <option value="6">2단</option>
+                        <option value="7">3단</option>
+                        <option value="7">4단</option>
+                        <option value="8">5단</option>
+                        <option value="8">6단</option>
+                        <option value="9">7단</option>
+                        <option value="9">8단</option>
+                        <option value="10">9단 (최강)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Formation Selection for Cho -->
+            <div class="formation-section" id="cho-formation-section">
+                <h3>초 포진</h3>
+                <div class="formation-options">
+                    <button class="formation-btn" data-side="cho" data-formation="0">
+                        <div class="formation-name">마상상마</div>
+                        <div class="formation-desc">馬象象馬</div>
+                    </button>
+                    <button class="formation-btn" data-side="cho" data-formation="1">
+                        <div class="formation-name">마상마상</div>
+                        <div class="formation-desc">馬象馬象</div>
+                    </button>
+                    <button class="formation-btn" data-side="cho" data-formation="2">
+                        <div class="formation-name">상마마상</div>
+                        <div class="formation-desc">象馬馬象</div>
+                    </button>
+                    <button class="formation-btn" data-side="cho" data-formation="3">
+                        <div class="formation-name">상마상마</div>
+                        <div class="formation-desc">象馬象馬</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Formation Selection for Han -->
+            <div class="formation-section" id="han-formation-section">
+                <h3>한 포진</h3>
+                <div class="formation-options">
+                    <button class="formation-btn" data-side="han" data-formation="0">
+                        <div class="formation-name">마상상마</div>
+                        <div class="formation-desc">馬象象馬</div>
+                    </button>
+                    <button class="formation-btn" data-side="han" data-formation="1">
+                        <div class="formation-name">마상마상</div>
+                        <div class="formation-desc">馬象馬象</div>
+                    </button>
+                    <button class="formation-btn" data-side="han" data-formation="2">
+                        <div class="formation-name">상마마상</div>
+                        <div class="formation-desc">象馬馬象</div>
+                    </button>
+                    <button class="formation-btn" data-side="han" data-formation="3">
+                        <div class="formation-name">상마상마</div>
+                        <div class="formation-desc">象馬象馬</div>
+                    </button>
+                </div>
+            </div>
+
+            <button id="start-game-btn" class="start-btn" disabled>게임 시작</button>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="sidebar left">
+            <div class="player-info" id="player-cho">
+                <h2>초</h2>
+                <div class="captured-pieces" id="captured-cho"></div>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div id="board" class="board">
+                <!-- Grid lines and pieces will be generated by JS -->
+            </div>
+        </div>
+
+        <div class="sidebar right">
+            <div class="player-info" id="player-han">
+                <h2>한</h2>
+                <div class="captured-pieces" id="captured-han"></div>
+            </div>
+            <div class="controls">
+                <div id="turn-indicator">차례: <span id="current-turn">초</span></div>
+                <button id="reset-btn">새 게임</button>
+                <div id="status-message"></div>
+            </div>
+        </div>
+    </div>
+    <script src="sounds.js"></script>
+    <script src="script.js"></script>
+    <script src="ai.js"></script>
+</body>
+
+</html>
