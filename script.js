@@ -11,6 +11,15 @@ const PIECE_TYPE = {
     JOL: 'jol'
 };
 
+const PIECE_VALUES = {
+    [PIECE_TYPE.CHA]: 13,
+    [PIECE_TYPE.PO]: 7,
+    [PIECE_TYPE.MA]: 5,
+    [PIECE_TYPE.SANG]: 3,
+    [PIECE_TYPE.SA]: 3,
+    [PIECE_TYPE.JOL]: 2
+};
+
 const SIDE = {
     CHO: 'cho',
     HAN: 'han'
@@ -65,6 +74,14 @@ class JanggiGame {
         this.boardElement = document.getElementById('board');
         this.statusElement = document.getElementById('status-message');
         this.turnElement = document.getElementById('current-turn');
+        this.moveCounterElement = document.getElementById('move-counter');
+        this.materialScoreElement = document.getElementById('material-score');
+        this.moveCount = 0;
+        this.maxMoves = 200;
+        this.gameOver = false;
+        this.lastMoveCapture = false;
+        this.lastMoveCheck = false;
+        this.passUsed = { cho: false, han: false };
 
         this.formations = {
             cho: null,
@@ -77,6 +94,7 @@ class JanggiGame {
         this.setupEventListeners();
         this.setupFormationModal();
         this.soundManager = new SoundManager();
+        this.updateScoreboard();
     }
 
     setupFormationModal() {
@@ -121,10 +139,18 @@ class JanggiGame {
             modal.classList.add('hidden');
             const aiSide = this.playerSide === 'cho' ? SIDE.HAN : SIDE.CHO;
             this.ai = new AI(this, aiSide, this.aiDifficulty);
+            this.turn = SIDE.CHO;
             this.initBoard(this.formations.cho, this.formations.han);
             this.renderPieces();
-            this.updateStatus("초의 차례");
-
+            this.moveCount = 0;
+            this.gameOver = false;
+            this.lastMoveCapture = false;
+            this.lastMoveCheck = false;
+            this.passUsed = { cho: false, han: false };
+            this.boardElement.style.pointerEvents = "auto";
+            this.updateScoreboard();
+            this.turnElement.textContent = 'Cho';
+            this.updateStatus("Cho's turn");
             // If AI is cho (player is han), AI moves first
             if (aiSide === SIDE.CHO) {
                 setTimeout(() => {
@@ -141,6 +167,84 @@ class JanggiGame {
         }
     }
 
+    computeMaterialScores() {
+        let cho = 0;
+        let han = 0;
+
+        for (let y = 0; y < BOARD_ROWS; y++) {
+            for (let x = 0; x < BOARD_COLS; x++) {
+                const piece = this.board[y][x];
+                if (!piece) continue;
+                const value = PIECE_VALUES[piece.type] || 0;
+                if (piece.side === SIDE.CHO) {
+                    cho += value;
+                } else {
+                    han += value;
+                }
+            }
+        }
+
+        return { cho, han };
+    }
+
+    updateScoreboard() {
+        if (this.moveCounterElement) {
+            this.moveCounterElement.textContent = `Moves: ${this.moveCount} / ${this.maxMoves}`;
+        }
+
+        if (this.materialScoreElement) {
+            const scores = this.computeMaterialScores();
+            const hanWithKomi = (scores.han + 1.5).toFixed(1);
+            const choText = scores.cho.toFixed(1);
+            this.materialScoreElement.textContent = `초: ${choText}, 한: ${hanWithKomi}`;
+        }
+    }
+
+    applyMaterialDecision(reason = 'rule end') {
+        if (this.gameOver) return true;
+        if (this.lastMoveCapture || this.lastMoveCheck) {
+            this.updateStatus('Material decision deferred (capture/check on last move).');
+            return false;
+        }
+
+        const { cho, han } = this.computeMaterialScores();
+        const choScore = cho;
+        const hanBase = han;
+        const hanWithKomi = hanBase + 1.5;
+
+        const choText = choScore.toFixed(1);
+        const hanBaseText = hanBase.toFixed(1);
+
+        let message;
+        if (Math.abs(choScore - hanWithKomi) < 1e-6) {
+            message = `Material draw (Cho ${choText}, Han ${hanBaseText}+1.5)`;
+        } else {
+            const winnerSide = choScore > hanWithKomi ? SIDE.CHO : SIDE.HAN;
+            const winnerLabel = winnerSide === SIDE.CHO ? 'Cho' : 'Han';
+            message = `Material win (${reason}) - ${winnerLabel} wins (Cho ${choText}, Han ${hanBaseText}+1.5)`;
+        }
+
+        this.updateStatus(message);
+        this.boardElement.style.pointerEvents = 'none';
+        this.gameOver = true;
+        setTimeout(() => alert(message), 100);
+        return true;
+    }
+
+    checkEndTriggers() {
+        if (this.gameOver) return true;
+
+        const scores = this.computeMaterialScores();
+        const lowMaterial = scores.cho <= 10 || scores.han <= 10;
+        const moveLimitReached = this.moveCount >= this.maxMoves;
+        const bothPassed = this.passUsed.cho && this.passUsed.han;
+
+        if (moveLimitReached || bothPassed || lowMaterial) {
+            const reason = moveLimitReached ? '200 moves' : (bothPassed ? 'both passed' : '10 or fewer points');
+            return this.applyMaterialDecision(reason);
+        }
+        return false;
+    }
     initBoard(choFormation = 0, hanFormation = 0) {
         this.board = Array(BOARD_ROWS).fill(null).map(() => Array(BOARD_COLS).fill(null));
 
@@ -244,6 +348,8 @@ class JanggiGame {
 
     setupEventListeners() {
         this.boardElement.addEventListener('click', (e) => {
+            if (this.gameOver) return;
+
             const rect = this.boardElement.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
@@ -257,7 +363,22 @@ class JanggiGame {
             this.formations = { cho: null, han: null };
             document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('selected'));
             document.getElementById('start-game-btn').disabled = true;
+            this.moveCount = 0;
+            this.gameOver = false;
+            this.updateScoreboard();
+            this.lastMoveCapture = false;
+            this.lastMoveCheck = false;
+            this.passUsed = { cho: false, han: false };
             this.boardElement.style.pointerEvents = 'auto';
+        });
+
+        document.getElementById('pass-btn').addEventListener('click', () => {
+            if (this.gameOver) return;
+            if (this.ai && this.turn !== this.playerSide) {
+                this.updateStatus("It is AI's turn.");
+                return;
+            }
+            this.handlePass();
         });
     }
 
@@ -268,13 +389,19 @@ class JanggiGame {
 
         if (this.selectedPiece) {
             if (this.isValidMove(this.selectedPiece, x, y)) {
-                this.movePiece(this.selectedPiece, x, y);
+                const ended = this.movePiece(this.selectedPiece, x, y);
                 this.selectedPiece = null;
                 this.clearHighlights();
-                this.switchTurn();
+                if (!ended) {
+                    this.switchTurn();
+                }
             } else if (clickedPiece && clickedPiece.side === this.turn) {
                 this.selectPiece(clickedPiece);
             } else {
+                const pseudoLegal = this.getPseudoLegalMoves(this.selectedPiece).some(m => m.x === x && m.y === y);
+                if (pseudoLegal) {
+                    this.updateStatus('착수 금지: 내 왕이 장군됩니다.');
+                }
                 this.selectedPiece = null;
                 this.clearHighlights();
             }
@@ -285,6 +412,18 @@ class JanggiGame {
         }
     }
 
+    handlePass() {
+        this.passUsed[this.turn] = true;
+        this.lastMoveCapture = false;
+        this.lastMoveCheck = false;
+        this.moveCount += 1;
+        this.updateScoreboard();
+
+        const ended = this.checkEndTriggers();
+        if (!ended) {
+            this.switchTurn();
+        }
+    }
     selectPiece(piece) {
         this.selectedPiece = piece;
         this.clearHighlights();
@@ -564,7 +703,10 @@ class JanggiGame {
     }
 
     movePiece(piece, x, y) {
+        if (this.gameOver) return false;
+
         const target = this.board[y][x];
+        this.lastMoveCapture = !!target;
         if (target) {
             this.capturePiece(target);
             this.soundManager.playCapture();
@@ -578,8 +720,14 @@ class JanggiGame {
         piece.y = y;
 
         this.renderPieces();
-    }
+        this.moveCount += 1;
+        this.passUsed = { cho: false, han: false };
+        this.updateScoreboard();
+        const opponent = piece.side === SIDE.CHO ? SIDE.HAN : SIDE.CHO;
+        this.lastMoveCheck = this.isCheck(opponent);
 
+        return this.checkEndTriggers();
+    }
     capturePiece(piece) {
         const capturerSide = piece.side === SIDE.CHO ? SIDE.HAN : SIDE.CHO;
         const capturerContainer = document.getElementById(`captured-${capturerSide}`);
@@ -591,6 +739,8 @@ class JanggiGame {
     }
 
     checkGameOver() {
+        if (this.gameOver) return;
+
         if (this.isCheckmate(this.turn)) {
             const winner = this.turn === SIDE.CHO ? '한' : '초';
             this.updateStatus(`외통수! ${winner} 승리!`);
@@ -603,7 +753,6 @@ class JanggiGame {
             this.soundManager.playCheck();
         }
     }
-
     isCheckmate(side) {
         if (!this.isCheck(side)) return false;
 
@@ -619,11 +768,17 @@ class JanggiGame {
     }
 
     switchTurn() {
+        if (this.gameOver) return;
+
         this.turn = this.turn === SIDE.CHO ? SIDE.HAN : SIDE.CHO;
         this.turnElement.textContent = this.turn === SIDE.CHO ? '초' : '한';
         this.updateStatus(`${this.turn === SIDE.CHO ? '초' : '한'}의 차례`);
 
         this.checkGameOver();
+        if (this.gameOver) {
+            this.boardElement.style.pointerEvents = 'none';
+            return;
+        }
 
         if (this.turn === this.ai.side) {
             this.boardElement.style.pointerEvents = 'none';
@@ -633,7 +788,6 @@ class JanggiGame {
             this.boardElement.style.pointerEvents = 'auto';
         }
     }
-
     updateStatus(msg) {
         this.statusElement.textContent = msg;
     }

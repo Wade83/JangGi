@@ -256,6 +256,11 @@ button {
     min-height: 24px;
 }
 
+.info-line {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
 .modal {
     display: flex;
     position: fixed;

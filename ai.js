@@ -3,19 +3,15 @@ class AI {
         this.game = game;
         this.side = side;
         this.maxDepth = difficulty; // Difficulty = search depth (1-10)
-        this.pieceValues = {
-            [PIECE_TYPE.CHA]: 13,
-            [PIECE_TYPE.PO]: 7,
-            [PIECE_TYPE.MA]: 5,
-            [PIECE_TYPE.SANG]: 3,
-            [PIECE_TYPE.SA]: 3,
-            [PIECE_TYPE.JOL]: 2,
-            [PIECE_TYPE.KING]: 1000
-        };
+        this.pieceValues = PIECE_VALUES;
     }
 
     makeMove() {
+        if (this.game.gameOver) return;
+
         setTimeout(() => {
+            if (this.game.gameOver) return;
+
             const bestMove = this.minimaxRoot(this.maxDepth, true);
             if (bestMove) {
                 // Clear selection before AI moves
@@ -23,18 +19,12 @@ class AI {
                 this.game.clearHighlights();
 
                 // Make the move
-                this.game.movePiece(bestMove.piece, bestMove.move.x, bestMove.move.y);
+                const ended = this.game.movePiece(bestMove.piece, bestMove.move.x, bestMove.move.y);
 
                 // Switch turn back to player
-                this.game.turn = this.game.turn === SIDE.CHO ? SIDE.HAN : SIDE.CHO;
-                this.game.turnElement.textContent = this.game.turn === SIDE.CHO ? 'Cho (Blue)' : 'Han (Red)';
-                this.game.updateStatus(`${this.game.turn === SIDE.CHO ? 'Cho' : 'Han'}'s Turn`);
-
-                // Check game over
-                this.game.checkGameOver();
-
-                // Re-enable board for player
-                this.game.boardElement.style.pointerEvents = 'auto';
+                if (!ended) {
+                    this.game.switchTurn();
+                }
             } else {
                 console.log("AI has no moves!");
                 this.game.updateStatus("AI has no legal moves!");
