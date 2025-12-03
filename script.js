@@ -290,10 +290,6 @@ class JanggiGame {
         if (diffSelect && diffSelect.value !== String(depth)) {
             diffSelect.value = String(depth);
         }
-        const startGrade = document.getElementById('start-grade');
-        if (startGrade && startGrade.value !== String(grade)) {
-            startGrade.value = String(grade);
-        }
     }
 
     getNextExpThreshold(grade) {
@@ -388,14 +384,15 @@ class JanggiGame {
         const formationBtns = document.querySelectorAll('.formation-btn');
         const sideBtns = document.querySelectorAll('.side-btn');
         const difficultySelect = document.getElementById('ai-difficulty');
-        const startGradeSelect = document.getElementById('start-grade');
-        const nameInput = document.getElementById('player-name');
 
         // Default formations pre-selected
         this.setDefaultFormations();
-        // Prefill profile data
-        if (nameInput && this.profile.name) nameInput.value = this.profile.name;
-        if (startGradeSelect) startGradeSelect.value = String(this.profile.grade || 1);
+        // Prefill difficulty based on current profile
+        const depth = this.gradeIndexToDepth(this.profile.grade);
+        if (difficultySelect) {
+            difficultySelect.value = String(depth);
+            this.aiDifficulty = depth;
+        }
 
         // Side selection
         sideBtns.forEach(btn => {
@@ -410,20 +407,6 @@ class JanggiGame {
         // Difficulty selection
         difficultySelect.addEventListener('change', () => {
             this.aiDifficulty = parseInt(difficultySelect.value);
-        });
-        startGradeSelect.addEventListener('change', () => {
-            // Update profile template grade before start
-            const g = parseInt(startGradeSelect.value);
-            if (!Number.isNaN(g)) {
-                this.profile.grade = g;
-                this.recalculateGrade();
-                const depth = this.gradeIndexToDepth(g);
-                if (difficultySelect) {
-                    difficultySelect.value = String(depth);
-                    this.aiDifficulty = depth;
-                }
-                this.updateProfileDisplay();
-            }
         });
 
         // Formation selection
@@ -443,36 +426,11 @@ class JanggiGame {
         });
 
         startBtn.addEventListener('click', () => {
-            const name = nameInput ? nameInput.value.trim() : '';
-            const startGrade = startGradeSelect ? parseInt(startGradeSelect.value) : 1;
-            if (name.length === 0) {
-                alert('이름을 입력해 주세요.');
+            if (!this.profile || !this.profile.name) {
+                alert('사용자를 먼저 선택해 주세요.');
+                this.showUserModal();
                 return;
             }
-            let target = this.profiles.find(p => p.name === name);
-            if (target) {
-                target.grade = startGrade || target.grade;
-                this.profile = { ...target };
-            } else {
-                if (this.profiles.length >= 10) {
-                    alert('등록 인원은 최대 10명입니다. 기존 사용자를 삭제하세요.');
-                    return;
-                }
-                this.profile = {
-                    name,
-                    grade: startGrade || 1,
-                    exp: 0,
-                    wins: 0,
-                    losses: 0,
-                    highestGrade: startGrade || 1
-                };
-                this.profiles.push(this.profile);
-            }
-            this.recalculateGrade();
-            const idx = this.profiles.findIndex(p => p.name === this.profile.name);
-            if (idx >= 0) this.profiles[idx] = this.profile;
-            this.saveProfiles();
-            this.updateProfileDisplay();
             modal.classList.add('hidden');
 
             // Get configured delay
