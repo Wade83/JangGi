@@ -79,6 +79,8 @@ class JanggiGame {
         this.profileGradeDisplay = document.getElementById('profile-grade-display');
         this.profileExpDisplay = document.getElementById('profile-exp-display');
         this.profileRecordDisplay = document.getElementById('profile-record-display');
+        this.userModalElement = document.getElementById('user-modal');
+        this.formationModalElement = document.getElementById('formation-modal');
         this.moveCount = 0;
         this.maxMoves = 200;
         this.gameOver = false;
@@ -114,9 +116,24 @@ class JanggiGame {
     }
 
     getDepthForDifficulty(level) {
-        // 9 단계: 레벨1(18~16급) -> 깊이1 ... 레벨9(7~9단) -> 깊이9
+        // 9단계 난이도(1~9) 그대로 깊이 매핑
         const map = [1, 2, 3, 4, 5, 6, 7, 8, 9];
         return map[(level || 1) - 1] || 1;
+    }
+
+    gradeIndexToDepth(gradeIndex) {
+        // 27단계(18급~9단)를 3단계씩 묶어 9단계 난이도로 변환
+        const idx = Math.max(1, Math.min(gradeIndex || 1, 27));
+        return Math.ceil(idx / 3);
+    }
+
+    getGradeLabel(idx) {
+        const labels = [
+            '18급','17급','16급','15급','14급','13급','12급','11급','10급',
+            '9급','8급','7급','6급','5급','4급','3급','2급','1급',
+            '1단','2단','3단','4단','5단','6단','7단','8단','9단'
+        ];
+        return labels[idx - 1] || `레벨 ${idx}`;
     }
 
     loadProfiles() {
@@ -249,7 +266,7 @@ class JanggiGame {
         const nextThreshold = this.getNextExpThreshold(grade);
         const thresholdText = (nextThreshold === null || nextThreshold === Infinity) ? 'MAX' : nextThreshold;
         if (this.profileNameDisplay) this.profileNameDisplay.textContent = `이름: ${name || '-'}`;
-        if (this.profileGradeDisplay) this.profileGradeDisplay.textContent = `레벨: ${grade}`;
+        if (this.profileGradeDisplay) this.profileGradeDisplay.textContent = `급수: ${this.getGradeLabel(grade)}`;
         if (this.profileExpDisplay) {
             const nextText = thresholdText === 'MAX' ? `${exp} / MAX` : `${exp} / ${thresholdText}`;
             this.profileExpDisplay.textContent = `EXP: ${nextText}`;
@@ -263,8 +280,9 @@ class JanggiGame {
         }
         // Reflect grade to difficulty select if available
         const diffSelect = document.getElementById('ai-difficulty');
-        if (diffSelect && diffSelect.value !== String(grade)) {
-            diffSelect.value = String(grade);
+        const depth = this.gradeIndexToDepth(grade);
+        if (diffSelect && diffSelect.value !== String(depth)) {
+            diffSelect.value = String(depth);
         }
         const startGrade = document.getElementById('start-grade');
         if (startGrade && startGrade.value !== String(grade)) {
@@ -273,8 +291,12 @@ class JanggiGame {
     }
 
     getNextExpThreshold(grade) {
-        // thresholds per level (1-indexed): reaching threshold bumps to next grade
-        const thresholds = [0, 200, 450, 750, 1100, 1500, 1950, 2450, 3000, Infinity];
+        // thresholds per grade index (1..27): reaching threshold bumps to next grade
+        const thresholds = [
+            0, 150, 320, 500, 700, 920, 1150, 1400, 1660, 1930,
+            2210, 2500, 2800, 3110, 3430, 3760, 4100, 4450, 4810,
+            5180, 5560, 5950, 6350, 6760, 7180, 7610, 8050, 8500, Infinity
+        ];
         return thresholds[grade] || null;
     }
 
@@ -301,9 +323,13 @@ class JanggiGame {
     }
 
     recalculateGrade() {
-        const thresholds = [0, 200, 450, 750, 1100, 1500, 1950, 2450, 3000, Infinity];
+        const thresholds = [
+            0, 150, 320, 500, 700, 920, 1150, 1400, 1660, 1930,
+            2210, 2500, 2800, 3110, 3430, 3760, 4100, 4450, 4810,
+            5180, 5560, 5950, 6350, 6760, 7180, 7610, 8050, 8500, Infinity
+        ];
         let newGrade = this.profile.grade;
-        while (newGrade < 9 && this.profile.exp >= thresholds[newGrade]) {
+        while (newGrade < 27 && this.profile.exp >= thresholds[newGrade]) {
             newGrade += 1;
         }
         while (newGrade > 1 && this.profile.exp < thresholds[newGrade - 1]) {
@@ -453,7 +479,8 @@ class JanggiGame {
             }
 
             const aiSide = this.playerSide === 'cho' ? SIDE.HAN : SIDE.CHO;
-            this.aiDifficulty = parseInt(difficultySelect.value) || this.profile.grade;
+            const selectedDepth = parseInt(difficultySelect.value) || this.gradeIndexToDepth(this.profile.grade);
+            this.aiDifficulty = selectedDepth;
             const searchDepth = this.getDepthForDifficulty(this.aiDifficulty);
             this.ai = new AI(this, aiSide, searchDepth);
             this.turn = SIDE.CHO;
