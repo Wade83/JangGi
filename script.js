@@ -417,6 +417,11 @@ class JanggiGame {
             if (!Number.isNaN(g)) {
                 this.profile.grade = g;
                 this.recalculateGrade();
+                const depth = this.gradeIndexToDepth(g);
+                if (difficultySelect) {
+                    difficultySelect.value = String(depth);
+                    this.aiDifficulty = depth;
+                }
                 this.updateProfileDisplay();
             }
         });
