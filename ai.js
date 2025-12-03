@@ -39,6 +39,7 @@ class AI {
                 const piece = board[y][x];
                 if (piece) {
                     const value = this.pieceValues[piece.type];
+                    if (value === undefined) continue; // skip kings (no material value)
                     if (piece.side === this.side) {
                         score += value;
                     } else {

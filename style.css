@@ -206,10 +206,51 @@ body {
 
 .sidebar {
     width: 200px;
+    /* Removed background to allow split look */
+    padding: 0;
+    border-radius: 10px;
+}
+
+.sidebar.left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 700px;
+}
+
+.sidebar.right {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+}
+
+.player-info {
+    flex: 1;
     background: rgba(0, 0, 0, 0.3);
     padding: 20px;
     border-radius: 10px;
-    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.player-header h2 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.player-score {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffd700;
 }
 
 .captured-pieces {

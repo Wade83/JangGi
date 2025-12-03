@@ -75,7 +75,6 @@ class JanggiGame {
         this.statusElement = document.getElementById('status-message');
         this.turnElement = document.getElementById('current-turn');
         this.moveCounterElement = document.getElementById('move-counter');
-        this.materialScoreElement = document.getElementById('material-score');
         this.moveCount = 0;
         this.maxMoves = 200;
         this.gameOver = false;
@@ -189,15 +188,18 @@ class JanggiGame {
 
     updateScoreboard() {
         if (this.moveCounterElement) {
-            this.moveCounterElement.textContent = `Moves: ${this.moveCount} / ${this.maxMoves}`;
+            this.moveCounterElement.textContent = `${this.moveCount} / ${this.maxMoves}`;
         }
 
-        if (this.materialScoreElement) {
-            const scores = this.computeMaterialScores();
-            const hanWithKomi = (scores.han + 1.5).toFixed(1);
-            const choText = scores.cho.toFixed(1);
-            this.materialScoreElement.textContent = `초: ${choText}, 한: ${hanWithKomi}`;
-        }
+        const scores = this.computeMaterialScores();
+        const hanWithKomi = (scores.han + 1.5).toFixed(1);
+        const choText = scores.cho.toFixed(1);
+
+        const scoreChoEl = document.getElementById('score-cho');
+        const scoreHanEl = document.getElementById('score-han');
+
+        if (scoreChoEl) scoreChoEl.textContent = choText;
+        if (scoreHanEl) scoreHanEl.textContent = hanWithKomi;
     }
 
     applyMaterialDecision(reason = 'rule end') {
@@ -359,17 +361,20 @@ class JanggiGame {
         });
 
         document.getElementById('reset-btn').addEventListener('click', () => {
-            document.getElementById('formation-modal').classList.remove('hidden');
-            this.formations = { cho: null, han: null };
-            document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('selected'));
-            document.getElementById('start-game-btn').disabled = true;
-            this.moveCount = 0;
-            this.gameOver = false;
-            this.updateScoreboard();
-            this.lastMoveCapture = false;
-            this.lastMoveCheck = false;
-            this.passUsed = { cho: false, han: false };
-            this.boardElement.style.pointerEvents = 'auto';
+            if (confirm('새 게임을 시작하시겠습니까? 현재 게임 내용은 사라집니다.')) {
+                document.getElementById('formation-modal').classList.remove('hidden');
+                this.formations = { cho: null, han: null };
+                document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('selected'));
+                document.getElementById('start-game-btn').disabled = true;
+                this.moveCount = 0;
+                this.gameOver = false;
+                this.updateScoreboard();
+                this.lastMoveCapture = false;
+                this.lastMoveCheck = false;
+                this.passUsed = { cho: false, han: false };
+                this.boardElement.style.pointerEvents = 'auto';
+                this.updateStatus('');
+            }
         });
 
         document.getElementById('pass-btn').addEventListener('click', () => {

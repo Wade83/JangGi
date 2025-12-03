@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>장기 - 웹 게임</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <!-- Formation Selection Modal -->
     <div id="formation-modal" class="modal">
@@ -115,8 +117,18 @@
 
     <div class="game-container">
         <div class="sidebar left">
+            <div class="player-info" id="player-han">
+                <div class="player-header">
+                    <h2>한 (Han)</h2>
+                    <span id="score-han" class="player-score">0.0</span>
+                </div>
+                <div class="captured-pieces" id="captured-han"></div>
+            </div>
             <div class="player-info" id="player-cho">
-                <h2>초</h2>
+                <div class="player-header">
+                    <h2>초 (Cho)</h2>
+                    <span id="score-cho" class="player-score">0.0</span>
+                </div>
                 <div class="captured-pieces" id="captured-cho"></div>
             </div>
         </div>
@@ -128,15 +140,10 @@
         </div>
 
         <div class="sidebar right">
-            <div class="player-info" id="player-han">
-                <h2>한</h2>
-                <div class="captured-pieces" id="captured-han"></div>
-            </div>
             <div class="controls">
                 <div id="turn-indicator">차례: <span id="current-turn">초</span></div>
-                <div id="move-counter" class="info-line">Moves: 0 / 200</div>
-                <div id="material-score" class="info-line">Material - Cho: 0, Han: 0</div>
-                <button id="pass-btn">Pass (skip)</button>
+                <div id="move-counter" class="info-line">0 / 200</div>
+                <button id="pass-btn">한수 쉼</button>
                 <button id="reset-btn">새 게임</button>
                 <div id="status-message"></div>
             </div>
@@ -147,4 +154,5 @@
     <script src="script.js"></script>
     <script src="ai.js"></script>
 </body>
+
 </html>
