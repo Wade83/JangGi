@@ -725,6 +725,14 @@ class JanggiGame {
         piece.y = y;
 
         this.renderPieces();
+
+        // Highlight last move
+        const allPieces = this.boardElement.querySelectorAll('.piece');
+        allPieces.forEach(p => p.classList.remove('last-move'));
+        if (piece.element) {
+            piece.element.classList.add('last-move');
+        }
+
         this.moveCount += 1;
         this.passUsed = { cho: false, han: false };
         this.updateScoreboard();
@@ -788,7 +796,9 @@ class JanggiGame {
         if (this.turn === this.ai.side) {
             this.boardElement.style.pointerEvents = 'none';
             this.updateStatus("AI가 생각 중...");
-            this.ai.makeMove();
+            setTimeout(() => {
+                this.ai.makeMove();
+            }, 2000);
         } else {
             this.boardElement.style.pointerEvents = 'auto';
         }
