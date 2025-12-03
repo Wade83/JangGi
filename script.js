@@ -95,7 +95,15 @@ class JanggiGame {
         this.aiDifficulty = 3;
         this.aiDelay = 1000; // Default 1 second
         this.moveHistory = []; // Track move history for undo
-        this.profile = this.loadProfile();
+        this.profiles = this.loadProfiles();
+        this.profile = this.profiles[0] || {
+            name: '',
+            grade: 1,
+            exp: 0,
+            wins: 0,
+            losses: 0,
+            highestGrade: 1
+        };
 
         this.drawGrid();
         this.setupEventListeners();
@@ -111,25 +119,128 @@ class JanggiGame {
         return map[(level || 1) - 1] || 1;
     }
 
-    loadProfile() {
+    loadProfiles() {
         try {
-            const raw = localStorage.getItem('janggiProfile');
+            const raw = localStorage.getItem('janggiProfiles');
             if (raw) return JSON.parse(raw);
         } catch (e) { }
-        return {
-            name: '',
-            grade: 1,
-            exp: 0,
-            wins: 0,
-            losses: 0,
-            highestGrade: 1
-        };
+        return [];
     }
 
-    saveProfile() {
+    saveProfiles() {
         try {
-            localStorage.setItem('janggiProfile', JSON.stringify(this.profile));
+            localStorage.setItem('janggiProfiles', JSON.stringify(this.profiles));
         } catch (e) { }
+    }
+
+    setupUserModal() {
+        const listEl = document.getElementById('user-list');
+        const noUserEl = document.getElementById('no-user');
+        const nameInput = document.getElementById('new-user-name');
+        const gradeSelect = document.getElementById('new-user-grade');
+        const addBtn = document.getElementById('add-user-btn');
+        const limitMsg = document.getElementById('user-limit-msg');
+
+        const renderList = () => {
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            const hasUsers = this.profiles.length > 0;
+            if (noUserEl) noUserEl.style.display = hasUsers ? 'none' : 'block';
+            if (limitMsg) limitMsg.textContent = this.profiles.length >= 10 ? '등록 인원은 최대 10명입니다.' : '';
+            this.profiles.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'user-item';
+                const nameDiv = document.createElement('div');
+                nameDiv.textContent = `${p.name} (레벨 ${p.grade})`;
+                const recordDiv = document.createElement('div');
+                recordDiv.textContent = `전적 ${p.wins || 0}승 ${p.losses || 0}패`;
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+                const selectBtn = document.createElement('button');
+                selectBtn.className = 'start-btn';
+                selectBtn.textContent = '선택';
+                selectBtn.addEventListener('click', () => {
+                    this.profile = { ...p };
+                    this.updateProfileDisplay();
+                    this.hideUserModal();
+                    this.showFormationModal();
+                });
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'start-btn slim';
+                deleteBtn.textContent = '삭제';
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm(`${p.name} 프로필을 삭제할까요?`)) {
+                        this.profiles = this.profiles.filter(x => x.name !== p.name);
+                        if (this.profile && this.profile.name === p.name) {
+                            this.profile = this.profiles[0] || {
+                                name: '',
+                                grade: 1,
+                                exp: 0,
+                                wins: 0,
+                                losses: 0,
+                                highestGrade: 1
+                            };
+                            this.updateProfileDisplay();
+                        }
+                        this.saveProfiles();
+                        renderList();
+                        if (this.profiles.length === 0) {
+                            this.showUserModal();
+                        }
+                    }
+                });
+                actions.appendChild(selectBtn);
+                actions.appendChild(deleteBtn);
+                item.appendChild(nameDiv);
+                item.appendChild(recordDiv);
+                item.appendChild(actions);
+                listEl.appendChild(item);
+            });
+        };
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                if (this.profiles.length >= 10) {
+                    if (limitMsg) limitMsg.textContent = '등록 인원은 최대 10명입니다.';
+                    return;
+                }
+                const name = nameInput ? nameInput.value.trim() : '';
+                const grade = gradeSelect ? parseInt(gradeSelect.value) : 1;
+                if (!name) {
+                    alert('이름을 입력해 주세요.');
+                    return;
+                }
+                if (this.profiles.some(p => p.name === name)) {
+                    alert('이미 동일한 이름의 사용자가 있습니다.');
+                    return;
+                }
+                const newProfile = {
+                    name,
+                    grade: grade || 1,
+                    exp: 0,
+                    wins: 0,
+                    losses: 0,
+                    highestGrade: grade || 1
+                };
+                this.profiles.push(newProfile);
+                this.saveProfiles();
+                renderList();
+            });
+        }
+
+        this.showUserModal();
+        renderList();
+    }
+
+    showUserModal() {
+        if (this.userModalElement) this.userModalElement.classList.remove('hidden');
+        if (this.formationModalElement) this.formationModalElement.classList.add('hidden');
+    }
+
+    showFormationModal() {
+        if (this.userModalElement) this.userModalElement.classList.add('hidden');
+        if (this.formationModalElement) this.formationModalElement.classList.remove('hidden');
+        this.updateProfileDisplay();
     }
 
     updateProfileDisplay() {
@@ -145,6 +256,10 @@ class JanggiGame {
         }
         if (this.profileRecordDisplay) {
             this.profileRecordDisplay.textContent = `전적: ${wins}승 ${losses}패`;
+        }
+        const nameInput = document.getElementById('player-name');
+        if (nameInput && nameInput.value !== (name || '')) {
+            nameInput.value = name || '';
         }
         // Reflect grade to difficulty select if available
         const diffSelect = document.getElementById('ai-difficulty');
@@ -178,7 +293,10 @@ class JanggiGame {
         }
         this.profile.exp = Math.max(0, this.profile.exp + delta);
         this.recalculateGrade();
-        this.saveProfile();
+        const idx = this.profiles.findIndex(p => p.name === this.profile.name);
+        if (idx >= 0) this.profiles[idx] = this.profile;
+        else this.profiles.push(this.profile);
+        this.saveProfiles();
         this.updateProfileDisplay();
     }
 
@@ -294,16 +412,29 @@ class JanggiGame {
                 alert('이름을 입력해 주세요.');
                 return;
             }
-            this.profile = {
-                name,
-                grade: startGrade,
-                exp: this.profile.name === name ? this.profile.exp : 0,
-                wins: this.profile.name === name ? this.profile.wins : 0,
-                losses: this.profile.name === name ? this.profile.losses : 0,
-                highestGrade: this.profile.name === name ? (this.profile.highestGrade || startGrade) : startGrade
-            };
+            let target = this.profiles.find(p => p.name === name);
+            if (target) {
+                target.grade = startGrade || target.grade;
+                this.profile = { ...target };
+            } else {
+                if (this.profiles.length >= 10) {
+                    alert('등록 인원은 최대 10명입니다. 기존 사용자를 삭제하세요.');
+                    return;
+                }
+                this.profile = {
+                    name,
+                    grade: startGrade || 1,
+                    exp: 0,
+                    wins: 0,
+                    losses: 0,
+                    highestGrade: startGrade || 1
+                };
+                this.profiles.push(this.profile);
+            }
             this.recalculateGrade();
-            this.saveProfile();
+            const idx = this.profiles.findIndex(p => p.name === this.profile.name);
+            if (idx >= 0) this.profiles[idx] = this.profile;
+            this.saveProfiles();
             this.updateProfileDisplay();
             modal.classList.add('hidden');
 

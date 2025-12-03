@@ -9,8 +9,39 @@
 </head>
 
 <body>
+    <!-- User Selection Modal -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <h2>사용자 선택</h2>
+            <div class="formation-section">
+                <h3>등록된 사용자</h3>
+                <div id="user-list" class="user-list"></div>
+                <div id="no-user" class="info-line">등록된 사용자가 없습니다.</div>
+            </div>
+            <div class="formation-section">
+                <h3>새 사용자 등록</h3>
+                <div class="profile-row">
+                    <input type="text" id="new-user-name" class="profile-input" placeholder="이름 입력">
+                    <select id="new-user-grade" class="difficulty-select">
+                        <option value="1">레벨1 (18~16급)</option>
+                        <option value="2">레벨2 (15~13급)</option>
+                        <option value="3">레벨3 (12~10급)</option>
+                        <option value="4">레벨4 (9~7급)</option>
+                        <option value="5">레벨5 (6~4급)</option>
+                        <option value="6">레벨6 (3~1급)</option>
+                        <option value="7">레벨7 (1~3단)</option>
+                        <option value="8">레벨8 (4~6단)</option>
+                        <option value="9">레벨9 (7~9단)</option>
+                    </select>
+                    <button id="add-user-btn" class="start-btn slim">사용자 등록</button>
+                </div>
+                <div class="info-line" id="user-limit-msg"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Formation Selection Modal -->
-    <div id="formation-modal" class="modal">
+    <div id="formation-modal" class="modal hidden">
         <div class="modal-content">
             <h2>대국 설정</h2>
 
