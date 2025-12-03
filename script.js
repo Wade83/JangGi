@@ -256,6 +256,10 @@ class JanggiGame {
         if (this.formationModalElement) this.formationModalElement.classList.add('hidden');
     }
 
+    hideUserModal() {
+        if (this.userModalElement) this.userModalElement.classList.add('hidden');
+    }
+
     showFormationModal() {
         if (this.userModalElement) this.userModalElement.classList.add('hidden');
         if (this.formationModalElement) this.formationModalElement.classList.remove('hidden');
