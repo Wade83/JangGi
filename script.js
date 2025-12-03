@@ -88,7 +88,7 @@ class JanggiGame {
         };
         this.playerSide = null;
         this.aiDifficulty = 3;
-        this.aiDelay = 2000; // Default 2 seconds
+        this.aiDelay = 1000; // Default 1 second
         this.moveHistory = []; // Track move history for undo
 
         this.drawGrid();
@@ -99,8 +99,8 @@ class JanggiGame {
     }
 
     getDepthForDifficulty(level) {
-        // Map 1(18급) -> 1 plies, 10(9단) -> 5 plies
-        const map = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5];
+        // 9 단계: 레벨1(18~16급) -> 깊이1 ... 레벨9(7~9단) -> 깊이9
+        const map = [1, 2, 3, 4, 5, 6, 7, 8, 9];
         return map[(level || 1) - 1] || 1;
     }
 
