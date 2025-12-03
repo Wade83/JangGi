@@ -168,7 +168,7 @@ class JanggiGame {
                 const item = document.createElement('div');
                 item.className = 'user-item';
                 const nameDiv = document.createElement('div');
-                nameDiv.textContent = `${p.name} (레벨 ${p.grade})`;
+                nameDiv.textContent = `${p.name} (${this.getGradeLabel(p.grade)})`;
                 const recordDiv = document.createElement('div');
                 recordDiv.textContent = `전적 ${p.wins || 0}승 ${p.losses || 0}패`;
                 const actions = document.createElement('div');
@@ -242,6 +242,7 @@ class JanggiGame {
                 this.profiles.push(newProfile);
                 this.saveProfiles();
                 renderList();
+                if (nameInput) nameInput.value = '';
             });
         }
 
