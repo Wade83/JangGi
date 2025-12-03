@@ -110,6 +110,7 @@ class JanggiGame {
         this.drawGrid();
         this.setupEventListeners();
         this.setupFormationModal();
+        this.setupUserModal();
         this.soundManager = new SoundManager();
         this.updateScoreboard();
         this.updateProfileDisplay();
