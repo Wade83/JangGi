@@ -75,12 +75,17 @@ class JanggiGame {
         this.statusElement = document.getElementById('status-message');
         this.moveCounterElement = document.getElementById('move-counter');
         this.difficultyDisplayElement = document.getElementById('difficulty-display');
+        this.profileNameDisplay = document.getElementById('profile-name-display');
+        this.profileGradeDisplay = document.getElementById('profile-grade-display');
+        this.profileExpDisplay = document.getElementById('profile-exp-display');
+        this.profileRecordDisplay = document.getElementById('profile-record-display');
         this.moveCount = 0;
         this.maxMoves = 200;
         this.gameOver = false;
         this.lastMoveCapture = false;
         this.lastMoveCheck = false;
         this.passUsed = { cho: false, han: false };
+        this.resultProcessed = false;
 
         this.formations = {
             cho: 0,
@@ -90,18 +95,115 @@ class JanggiGame {
         this.aiDifficulty = 3;
         this.aiDelay = 1000; // Default 1 second
         this.moveHistory = []; // Track move history for undo
+        this.profile = this.loadProfile();
 
         this.drawGrid();
         this.setupEventListeners();
         this.setupFormationModal();
         this.soundManager = new SoundManager();
         this.updateScoreboard();
+        this.updateProfileDisplay();
     }
 
     getDepthForDifficulty(level) {
         // 9 단계: 레벨1(18~16급) -> 깊이1 ... 레벨9(7~9단) -> 깊이9
         const map = [1, 2, 3, 4, 5, 6, 7, 8, 9];
         return map[(level || 1) - 1] || 1;
+    }
+
+    loadProfile() {
+        try {
+            const raw = localStorage.getItem('janggiProfile');
+            if (raw) return JSON.parse(raw);
+        } catch (e) { }
+        return {
+            name: '',
+            grade: 1,
+            exp: 0,
+            wins: 0,
+            losses: 0,
+            highestGrade: 1
+        };
+    }
+
+    saveProfile() {
+        try {
+            localStorage.setItem('janggiProfile', JSON.stringify(this.profile));
+        } catch (e) { }
+    }
+
+    updateProfileDisplay() {
+        if (!this.profile) return;
+        const { name, grade, exp, wins, losses } = this.profile;
+        const nextThreshold = this.getNextExpThreshold(grade);
+        const thresholdText = (nextThreshold === null || nextThreshold === Infinity) ? 'MAX' : nextThreshold;
+        if (this.profileNameDisplay) this.profileNameDisplay.textContent = `이름: ${name || '-'}`;
+        if (this.profileGradeDisplay) this.profileGradeDisplay.textContent = `레벨: ${grade}`;
+        if (this.profileExpDisplay) {
+            const nextText = thresholdText === 'MAX' ? `${exp} / MAX` : `${exp} / ${thresholdText}`;
+            this.profileExpDisplay.textContent = `EXP: ${nextText}`;
+        }
+        if (this.profileRecordDisplay) {
+            this.profileRecordDisplay.textContent = `전적: ${wins}승 ${losses}패`;
+        }
+        // Reflect grade to difficulty select if available
+        const diffSelect = document.getElementById('ai-difficulty');
+        if (diffSelect && diffSelect.value !== String(grade)) {
+            diffSelect.value = String(grade);
+        }
+        const startGrade = document.getElementById('start-grade');
+        if (startGrade && startGrade.value !== String(grade)) {
+            startGrade.value = String(grade);
+        }
+    }
+
+    getNextExpThreshold(grade) {
+        // thresholds per level (1-indexed): reaching threshold bumps to next grade
+        const thresholds = [0, 200, 450, 750, 1100, 1500, 1950, 2450, 3000, Infinity];
+        return thresholds[grade] || null;
+    }
+
+    applyResultToProfile(outcome) {
+        if (!this.profile) return;
+        const diff = this.aiDifficulty - this.profile.grade;
+        let delta = 0;
+        if (outcome === 'win') {
+            delta = 100 + Math.max(0, diff) * 40;
+            this.profile.wins += 1;
+        } else if (outcome === 'loss') {
+            delta = -60 - Math.max(0, -diff) * 20;
+            this.profile.losses += 1;
+        } else {
+            delta = 40;
+        }
+        this.profile.exp = Math.max(0, this.profile.exp + delta);
+        this.recalculateGrade();
+        this.saveProfile();
+        this.updateProfileDisplay();
+    }
+
+    recalculateGrade() {
+        const thresholds = [0, 200, 450, 750, 1100, 1500, 1950, 2450, 3000, Infinity];
+        let newGrade = this.profile.grade;
+        while (newGrade < 9 && this.profile.exp >= thresholds[newGrade]) {
+            newGrade += 1;
+        }
+        while (newGrade > 1 && this.profile.exp < thresholds[newGrade - 1]) {
+            newGrade -= 1;
+        }
+        this.profile.grade = newGrade;
+        this.profile.highestGrade = Math.max(this.profile.highestGrade || newGrade, newGrade);
+    }
+
+    onGameEnd(winnerSide) {
+        if (this.resultProcessed) return;
+        this.resultProcessed = true;
+        if (!this.playerSide) return;
+        let outcome = 'draw';
+        if (winnerSide) {
+            outcome = winnerSide === this.playerSide ? 'win' : 'loss';
+        }
+        this.applyResultToProfile(outcome);
     }
 
     resumeTurnState(fromUndo = false) {
@@ -136,9 +238,14 @@ class JanggiGame {
         const formationBtns = document.querySelectorAll('.formation-btn');
         const sideBtns = document.querySelectorAll('.side-btn');
         const difficultySelect = document.getElementById('ai-difficulty');
+        const startGradeSelect = document.getElementById('start-grade');
+        const nameInput = document.getElementById('player-name');
 
         // Default formations pre-selected
         this.setDefaultFormations();
+        // Prefill profile data
+        if (nameInput && this.profile.name) nameInput.value = this.profile.name;
+        if (startGradeSelect) startGradeSelect.value = String(this.profile.grade || 1);
 
         // Side selection
         sideBtns.forEach(btn => {
@@ -153,6 +260,15 @@ class JanggiGame {
         // Difficulty selection
         difficultySelect.addEventListener('change', () => {
             this.aiDifficulty = parseInt(difficultySelect.value);
+        });
+        startGradeSelect.addEventListener('change', () => {
+            // Update profile template grade before start
+            const g = parseInt(startGradeSelect.value);
+            if (!Number.isNaN(g)) {
+                this.profile.grade = g;
+                this.recalculateGrade();
+                this.updateProfileDisplay();
+            }
         });
 
         // Formation selection
@@ -172,6 +288,23 @@ class JanggiGame {
         });
 
         startBtn.addEventListener('click', () => {
+            const name = nameInput ? nameInput.value.trim() : '';
+            const startGrade = startGradeSelect ? parseInt(startGradeSelect.value) : 1;
+            if (name.length === 0) {
+                alert('이름을 입력해 주세요.');
+                return;
+            }
+            this.profile = {
+                name,
+                grade: startGrade,
+                exp: this.profile.name === name ? this.profile.exp : 0,
+                wins: this.profile.name === name ? this.profile.wins : 0,
+                losses: this.profile.name === name ? this.profile.losses : 0,
+                highestGrade: this.profile.name === name ? (this.profile.highestGrade || startGrade) : startGrade
+            };
+            this.recalculateGrade();
+            this.saveProfile();
+            this.updateProfileDisplay();
             modal.classList.add('hidden');
 
             // Get configured delay
@@ -189,6 +322,7 @@ class JanggiGame {
             }
 
             const aiSide = this.playerSide === 'cho' ? SIDE.HAN : SIDE.CHO;
+            this.aiDifficulty = parseInt(difficultySelect.value) || this.profile.grade;
             const searchDepth = this.getDepthForDifficulty(this.aiDifficulty);
             this.ai = new AI(this, aiSide, searchDepth);
             this.turn = SIDE.CHO;
@@ -196,6 +330,7 @@ class JanggiGame {
             this.renderPieces();
             this.moveCount = 0;
             this.gameOver = false;
+            this.resultProcessed = false;
             this.lastMoveCapture = false;
             this.lastMoveCheck = false;
             this.passUsed = { cho: false, han: false };
@@ -270,10 +405,11 @@ class JanggiGame {
         const hanBaseText = hanBase.toFixed(1);
 
         let message;
+        let winnerSide = null;
         if (Math.abs(choScore - hanWithKomi) < 1e-6) {
             message = `Material draw (Cho ${choText}, Han ${hanBaseText}+1.5)`;
         } else {
-            const winnerSide = choScore > hanWithKomi ? SIDE.CHO : SIDE.HAN;
+            winnerSide = choScore > hanWithKomi ? SIDE.CHO : SIDE.HAN;
             const winnerLabel = winnerSide === SIDE.CHO ? 'Cho' : 'Han';
             message = `Material win (${reason}) - ${winnerLabel} wins (Cho ${choText}, Han ${hanBaseText}+1.5)`;
         }
@@ -281,6 +417,7 @@ class JanggiGame {
         this.updateStatus(message);
         this.boardElement.style.pointerEvents = 'none';
         this.gameOver = true;
+        this.onGameEnd(winnerSide);
         setTimeout(() => alert(message), 100);
         return true;
     }
@@ -421,6 +558,7 @@ class JanggiGame {
                 document.getElementById('start-game-btn').disabled = true;
                 this.moveCount = 0;
                 this.gameOver = false;
+                this.resultProcessed = false;
                 this.updateScoreboard();
                 this.lastMoveCapture = false;
                 this.lastMoveCheck = false;
@@ -902,10 +1040,12 @@ class JanggiGame {
         if (this.gameOver) return;
 
         if (this.isCheckmate(this.turn)) {
-            const winner = this.turn === SIDE.CHO ? '한' : '초';
+            const winnerSide = this.turn === SIDE.CHO ? SIDE.HAN : SIDE.CHO;
+            const winner = winnerSide === SIDE.CHO ? '초' : '한';
             this.updateStatus(`외통수! ${winner} 승리!`);
             this.boardElement.style.pointerEvents = 'none';
             this.soundManager.playGameOver(this.turn !== SIDE.CHO);
+            this.onGameEnd(winnerSide);
             setTimeout(() => alert(`외통수! ${winner} 승리!`), 100);
         } else if (this.isCheck(this.turn)) {
             const player = this.turn === SIDE.CHO ? '초' : '한';

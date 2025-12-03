@@ -16,6 +16,24 @@
 
             <!-- Player Side Selection -->
             <div class="formation-section">
+                <h3>프로필</h3>
+                <div class="profile-row">
+                    <input type="text" id="player-name" class="profile-input" placeholder="이름 입력">
+                    <select id="start-grade" class="difficulty-select">
+                        <option value="1">레벨1 (18~16급)</option>
+                        <option value="2">레벨2 (15~13급)</option>
+                        <option value="3">레벨3 (12~10급)</option>
+                        <option value="4">레벨4 (9~7급)</option>
+                        <option value="5">레벨5 (6~4급)</option>
+                        <option value="6">레벨6 (3~1급)</option>
+                        <option value="7">레벨7 (1~3단)</option>
+                        <option value="8">레벨8 (4~6단)</option>
+                        <option value="9">레벨9 (7~9단)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="formation-section">
                 <h3>플레이어 진영</h3>
                 <div class="side-options">
                     <button class="side-btn" data-side="cho">
@@ -131,6 +149,12 @@
 
         <div class="sidebar right">
             <div class="controls">
+                <div class="profile-summary">
+                    <div id="profile-name-display">이름: -</div>
+                    <div id="profile-grade-display">레벨: -</div>
+                    <div id="profile-exp-display">EXP: 0 / -</div>
+                    <div id="profile-record-display">전적: 0승 0패</div>
+                </div>
                 <div id="difficulty-display" class="info-line">난이도: -</div>
                 <div id="turn-indicator">턴: <span id="current-turn">초</span></div>
                 <div id="move-counter" class="info-line">0 / 200</div>
