@@ -65,6 +65,14 @@
                 </div>
             </div>
 
+            <!-- AI Delay Selection -->
+            <div class="formation-section">
+                <h3>AI 착수 시간 (초)</h3>
+                <div class="difficulty-options">
+                    <input type="number" id="ai-delay" class="difficulty-select" min="0" max="5" value="2" step="0.5">
+                </div>
+            </div>
+
             <!-- Formation Selection for Cho -->
             <div class="formation-section" id="cho-formation-section">
                 <h3>초 포진</h3>
@@ -141,6 +149,7 @@
 
         <div class="sidebar right">
             <div class="controls">
+                <div id="difficulty-display" class="info-line">난이도: -</div>
                 <div id="turn-indicator">차례: <span id="current-turn">초</span></div>
                 <div id="move-counter" class="info-line">0 / 200</div>
                 <button id="pass-btn">한수 쉼</button>

@@ -477,8 +477,24 @@ button {
     cursor: not-allowed;
     opacity: 0.5;
 }
+
 .piece.last-move {
-    box-shadow: 0 0 15px 5px rgba(0, 191, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 20px 8px rgba(0, 255, 255, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.7);
     z-index: 15;
-    border: 2px solid rgba(0, 191, 255, 0.9);
+    border: 3px solid rgba(0, 255, 255, 1);
+    animation: pulse-highlight 2s infinite;
+}
+
+@keyframes pulse-highlight {
+    0% {
+        box-shadow: 0 0 20px 8px rgba(0, 255, 255, 0.9);
+    }
+
+    50% {
+        box-shadow: 0 0 30px 12px rgba(0, 255, 255, 1);
+    }
+
+    100% {
+        box-shadow: 0 0 20px 8px rgba(0, 255, 255, 0.9);
+    }
 }

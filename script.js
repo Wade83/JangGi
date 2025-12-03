@@ -75,6 +75,7 @@ class JanggiGame {
         this.statusElement = document.getElementById('status-message');
         this.turnElement = document.getElementById('current-turn');
         this.moveCounterElement = document.getElementById('move-counter');
+        this.difficultyDisplayElement = document.getElementById('difficulty-display');
         this.moveCount = 0;
         this.maxMoves = 200;
         this.gameOver = false;
@@ -88,6 +89,7 @@ class JanggiGame {
         };
         this.playerSide = null;
         this.aiDifficulty = 3;
+        this.aiDelay = 2000; // Default 2 seconds
 
         this.drawGrid();
         this.setupEventListeners();
@@ -136,6 +138,21 @@ class JanggiGame {
 
         startBtn.addEventListener('click', () => {
             modal.classList.add('hidden');
+
+            // Get configured delay
+            const delayInput = document.getElementById('ai-delay');
+            if (delayInput) {
+                this.aiDelay = parseFloat(delayInput.value) * 1000;
+                // Clamp between 0 and 5000ms
+                this.aiDelay = Math.max(0, Math.min(5000, this.aiDelay));
+            }
+
+            // Update difficulty display
+            if (this.difficultyDisplayElement) {
+                const diffText = difficultySelect.options[difficultySelect.selectedIndex].text;
+                this.difficultyDisplayElement.textContent = `난이도: ${diffText}`;
+            }
+
             const aiSide = this.playerSide === 'cho' ? SIDE.HAN : SIDE.CHO;
             this.ai = new AI(this, aiSide, this.aiDifficulty);
             this.turn = SIDE.CHO;
@@ -798,7 +815,7 @@ class JanggiGame {
             this.updateStatus("AI가 생각 중...");
             setTimeout(() => {
                 this.ai.makeMove();
-            }, 2000);
+            }, this.aiDelay);
         } else {
             this.boardElement.style.pointerEvents = 'auto';
         }
