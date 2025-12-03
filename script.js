@@ -98,6 +98,12 @@ class JanggiGame {
         this.updateScoreboard();
     }
 
+    getDepthForDifficulty(level) {
+        // Map 1(18급) -> 1 plies, 10(9단) -> 5 plies
+        const map = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5];
+        return map[(level || 1) - 1] || 1;
+    }
+
     resumeTurnState(fromUndo = false) {
         if (this.gameOver) return;
         const isAITurn = this.ai && this.turn === this.ai.side;
@@ -183,7 +189,8 @@ class JanggiGame {
             }
 
             const aiSide = this.playerSide === 'cho' ? SIDE.HAN : SIDE.CHO;
-            this.ai = new AI(this, aiSide, this.aiDifficulty);
+            const searchDepth = this.getDepthForDifficulty(this.aiDifficulty);
+            this.ai = new AI(this, aiSide, searchDepth);
             this.turn = SIDE.CHO;
             this.initBoard(this.formations.cho, this.formations.han);
             this.renderPieces();
