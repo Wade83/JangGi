@@ -1,4 +1,4 @@
-const BOARD_COLS = 9;
+﻿const BOARD_COLS = 9;
 const BOARD_ROWS = 10;
 
 const PIECE_TYPE = {
@@ -73,7 +73,6 @@ class JanggiGame {
         this.selectedPiece = null;
         this.boardElement = document.getElementById('board');
         this.statusElement = document.getElementById('status-message');
-        this.turnElement = document.getElementById('current-turn');
         this.moveCounterElement = document.getElementById('move-counter');
         this.difficultyDisplayElement = document.getElementById('difficulty-display');
         this.moveCount = 0;
@@ -84,12 +83,13 @@ class JanggiGame {
         this.passUsed = { cho: false, han: false };
 
         this.formations = {
-            cho: null,
-            han: null
+            cho: 0,
+            han: 0
         };
         this.playerSide = null;
         this.aiDifficulty = 3;
         this.aiDelay = 2000; // Default 2 seconds
+        this.moveHistory = []; // Track move history for undo
 
         this.drawGrid();
         this.setupEventListeners();
@@ -98,12 +98,41 @@ class JanggiGame {
         this.updateScoreboard();
     }
 
+    resumeTurnState(fromUndo = false) {
+        if (this.gameOver) return;
+        const isAITurn = this.ai && this.turn === this.ai.side;
+        if (isAITurn) {
+            this.boardElement.style.pointerEvents = 'none';
+            this.updateStatus("AI가 생각 중...");
+            if (fromUndo) {
+                setTimeout(() => this.ai.makeMove(), this.aiDelay);
+            }
+        } else {
+            this.boardElement.style.pointerEvents = 'auto';
+            this.updateStatus(`${this.turn === SIDE.CHO ? '초' : '한'}의 차례입니다`);
+        }
+    }
+
+    setDefaultFormations() {
+        this.formations = { cho: 0, han: 0 };
+        document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('selected'));
+        ['cho', 'han'].forEach(side => {
+            const btn = document.querySelector(`.formation-btn[data-side="${side}"][data-formation="0"]`);
+            if (btn) {
+                btn.classList.add('selected');
+            }
+        });
+    }
+
     setupFormationModal() {
         const modal = document.getElementById('formation-modal');
         const startBtn = document.getElementById('start-game-btn');
         const formationBtns = document.querySelectorAll('.formation-btn');
         const sideBtns = document.querySelectorAll('.side-btn');
         const difficultySelect = document.getElementById('ai-difficulty');
+
+        // Default formations pre-selected
+        this.setDefaultFormations();
 
         // Side selection
         sideBtns.forEach(btn => {
@@ -165,8 +194,7 @@ class JanggiGame {
             this.passUsed = { cho: false, han: false };
             this.boardElement.style.pointerEvents = "auto";
             this.updateScoreboard();
-            this.turnElement.textContent = 'Cho';
-            this.updateStatus("Cho's turn");
+            this.updateStatus("초의 차례입니다");
             // If AI is cho (player is han), AI moves first
             if (aiSide === SIDE.CHO) {
                 setTimeout(() => {
@@ -380,8 +408,9 @@ class JanggiGame {
         document.getElementById('reset-btn').addEventListener('click', () => {
             if (confirm('새 게임을 시작하시겠습니까? 현재 게임 내용은 사라집니다.')) {
                 document.getElementById('formation-modal').classList.remove('hidden');
-                this.formations = { cho: null, han: null };
-                document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('selected'));
+                this.setDefaultFormations();
+                document.querySelectorAll('.side-btn').forEach(b => b.classList.remove('selected'));
+                this.playerSide = null;
                 document.getElementById('start-game-btn').disabled = true;
                 this.moveCount = 0;
                 this.gameOver = false;
@@ -401,6 +430,10 @@ class JanggiGame {
                 return;
             }
             this.handlePass();
+        });
+
+        document.getElementById('undo-btn').addEventListener('click', () => {
+            this.handleUndo();
         });
     }
 
@@ -435,6 +468,16 @@ class JanggiGame {
     }
 
     handlePass() {
+        // Save pass action to history so it can be undone
+        this.moveHistory.push({
+            action: 'pass',
+            moveCount: this.moveCount,
+            turn: this.turn,
+            passUsed: { ...this.passUsed },
+            lastMoveCapture: this.lastMoveCapture,
+            lastMoveCheck: this.lastMoveCheck
+        });
+
         this.passUsed[this.turn] = true;
         this.lastMoveCapture = false;
         this.lastMoveCheck = false;
@@ -445,6 +488,69 @@ class JanggiGame {
         if (!ended) {
             this.switchTurn();
         }
+    }
+
+    handleUndo() {
+        if (this.gameOver) {
+            this.updateStatus("게임이 종료되었습니다.");
+            return;
+        }
+
+        if (this.moveHistory.length === 0) {
+            this.updateStatus("무를 수가 없습니다.");
+            return;
+        }
+
+        const restoreHistoryEntry = (entry) => {
+            if (entry.action === 'pass') {
+                this.moveCount = entry.moveCount;
+                this.turn = entry.turn;
+                this.passUsed = { ...entry.passUsed };
+                this.lastMoveCapture = entry.lastMoveCapture;
+                this.lastMoveCheck = entry.lastMoveCheck;
+                this.updateScoreboard();
+                return;
+            }
+
+            this.board[entry.fromY][entry.fromX] = entry.piece;
+            this.board[entry.toY][entry.toX] = entry.captured;
+            entry.piece.x = entry.fromX;
+            entry.piece.y = entry.fromY;
+
+            if (entry.captured) {
+                const capturerSide = entry.captured.side === SIDE.CHO ? SIDE.HAN : SIDE.CHO;
+                const capturerContainer = document.getElementById(`captured-${capturerSide}`);
+                if (capturerContainer.lastChild) {
+                    capturerContainer.removeChild(capturerContainer.lastChild);
+                }
+            }
+
+            this.moveCount = entry.moveCount;
+            this.turn = entry.turn;
+            this.passUsed = { ...entry.passUsed };
+            this.lastMoveCapture = entry.lastMoveCapture;
+            this.lastMoveCheck = entry.lastMoveCheck;
+            this.renderPieces();
+            this.updateScoreboard();
+        };
+
+        const undoOnce = () => {
+            if (this.moveHistory.length === 0) return;
+            const entry = this.moveHistory.pop();
+            restoreHistoryEntry(entry);
+        };
+
+        // 플레이어 차례에 무르면 AI 수와 내 수를 한꺼번에 되돌린다
+        if (this.ai && this.playerSide && this.turn === this.playerSide) {
+            undoOnce(); // 상대 수
+            undoOnce(); // 내 수
+        } else {
+            undoOnce();
+        }
+
+        this.selectedPiece = null;
+        this.clearHighlights();
+        this.resumeTurnState(true);
     }
     selectPiece(piece) {
         this.selectedPiece = piece;
@@ -728,6 +834,23 @@ class JanggiGame {
         if (this.gameOver) return false;
 
         const target = this.board[y][x];
+
+        // Save move to history before making the move
+        this.moveHistory.push({
+            action: 'move',
+            piece: piece,
+            fromX: piece.x,
+            fromY: piece.y,
+            toX: x,
+            toY: y,
+            captured: target,
+            moveCount: this.moveCount,
+            turn: this.turn,
+            passUsed: { ...this.passUsed },
+            lastMoveCapture: this.lastMoveCapture,
+            lastMoveCheck: this.lastMoveCheck
+        });
+
         this.lastMoveCapture = !!target;
         if (target) {
             this.capturePiece(target);
@@ -801,8 +924,7 @@ class JanggiGame {
         if (this.gameOver) return;
 
         this.turn = this.turn === SIDE.CHO ? SIDE.HAN : SIDE.CHO;
-        this.turnElement.textContent = this.turn === SIDE.CHO ? '초' : '한';
-        this.updateStatus(`${this.turn === SIDE.CHO ? '초' : '한'}의 차례`);
+        this.updateStatus(`${this.turn === SIDE.CHO ? '초' : '한'}의 차례입니다`);
 
         this.checkGameOver();
         if (this.gameOver) {
@@ -828,3 +950,4 @@ class JanggiGame {
 window.onload = () => {
     const game = new JanggiGame();
 };
+

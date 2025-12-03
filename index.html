@@ -12,19 +12,19 @@
     <!-- Formation Selection Modal -->
     <div id="formation-modal" class="modal">
         <div class="modal-content">
-            <h2>게임 설정</h2>
+            <h2>대국 설정</h2>
 
             <!-- Player Side Selection -->
             <div class="formation-section">
-                <h3>플레이어 선택</h3>
+                <h3>플레이어 진영</h3>
                 <div class="side-options">
                     <button class="side-btn" data-side="cho">
-                        <div class="side-name">초 (청색)</div>
-                        <div class="side-desc">기물: 초</div>
+                        <div class="side-name">초 (Cho)</div>
+                        <div class="side-desc">선공</div>
                     </button>
                     <button class="side-btn" data-side="han">
-                        <div class="side-name">한 (적색)</div>
-                        <div class="side-desc">기물: 한</div>
+                        <div class="side-name">한 (Han)</div>
+                        <div class="side-desc">후공</div>
                     </button>
                 </div>
             </div>
@@ -36,38 +36,21 @@
                     <select id="ai-difficulty" class="difficulty-select">
                         <option value="1">18급 (초보)</option>
                         <option value="2">17급</option>
-                        <option value="2">16급</option>
-                        <option value="2">15급</option>
-                        <option value="3">14급</option>
-                        <option value="3">13급</option>
-                        <option value="3">12급</option>
-                        <option value="3">11급</option>
-                        <option value="3">10급</option>
-                        <option value="4">9급</option>
-                        <option value="4">8급</option>
-                        <option value="4">7급</option>
-                        <option value="4">6급</option>
-                        <option value="4">5급</option>
-                        <option value="5">4급</option>
-                        <option value="5">3급</option>
-                        <option value="5">2급</option>
-                        <option value="5">1급</option>
-                        <option value="6">1단</option>
-                        <option value="6">2단</option>
-                        <option value="7">3단</option>
-                        <option value="7">4단</option>
-                        <option value="8">5단</option>
-                        <option value="8">6단</option>
-                        <option value="9">7단</option>
-                        <option value="9">8단</option>
-                        <option value="10">9단 (최강)</option>
+                        <option value="3">16급</option>
+                        <option value="4">15급</option>
+                        <option value="5">14급</option>
+                        <option value="6">13급</option>
+                        <option value="7">12급</option>
+                        <option value="8">11급</option>
+                        <option value="9">10급</option>
+                        <option value="10">9급 (고급)</option>
                     </select>
                 </div>
             </div>
 
             <!-- AI Delay Selection -->
             <div class="formation-section">
-                <h3>AI 착수 시간 (초)</h3>
+                <h3>AI 지연 시간 (초)</h3>
                 <div class="difficulty-options">
                     <input type="number" id="ai-delay" class="difficulty-select" min="0" max="5" value="2" step="0.5">
                 </div>
@@ -79,19 +62,19 @@
                 <div class="formation-options">
                     <button class="formation-btn" data-side="cho" data-formation="0">
                         <div class="formation-name">마상상마</div>
-                        <div class="formation-desc">馬 象 象 馬</div>
+                        <div class="formation-desc">마 상 상 마</div>
                     </button>
                     <button class="formation-btn" data-side="cho" data-formation="1">
                         <div class="formation-name">마상마상</div>
-                        <div class="formation-desc">馬 象 馬 象</div>
+                        <div class="formation-desc">마 상 마 상</div>
                     </button>
                     <button class="formation-btn" data-side="cho" data-formation="2">
                         <div class="formation-name">상마마상</div>
-                        <div class="formation-desc">象 馬 馬 象</div>
+                        <div class="formation-desc">상 마 마 상</div>
                     </button>
                     <button class="formation-btn" data-side="cho" data-formation="3">
                         <div class="formation-name">상마상마</div>
-                        <div class="formation-desc">象 馬 象 馬</div>
+                        <div class="formation-desc">상 마 상 마</div>
                     </button>
                 </div>
             </div>
@@ -102,24 +85,24 @@
                 <div class="formation-options">
                     <button class="formation-btn" data-side="han" data-formation="0">
                         <div class="formation-name">마상상마</div>
-                        <div class="formation-desc">馬 象 象 馬</div>
+                        <div class="formation-desc">마 상 상 마</div>
                     </button>
                     <button class="formation-btn" data-side="han" data-formation="1">
                         <div class="formation-name">마상마상</div>
-                        <div class="formation-desc">馬 象 馬 象</div>
+                        <div class="formation-desc">마 상 마 상</div>
                     </button>
                     <button class="formation-btn" data-side="han" data-formation="2">
                         <div class="formation-name">상마마상</div>
-                        <div class="formation-desc">象 馬 馬 象</div>
+                        <div class="formation-desc">상 마 마 상</div>
                     </button>
                     <button class="formation-btn" data-side="han" data-formation="3">
                         <div class="formation-name">상마상마</div>
-                        <div class="formation-desc">象 馬 象 馬</div>
+                        <div class="formation-desc">상 마 상 마</div>
                     </button>
                 </div>
             </div>
 
-            <button id="start-game-btn" class="start-btn" disabled>게임 시작</button>
+            <button id="start-game-btn" class="start-btn" disabled>대국 시작</button>
         </div>
     </div>
 
@@ -150,9 +133,10 @@
         <div class="sidebar right">
             <div class="controls">
                 <div id="difficulty-display" class="info-line">난이도: -</div>
-                <div id="turn-indicator">차례: <span id="current-turn">초</span></div>
+                <div id="turn-indicator">턴: <span id="current-turn">초</span></div>
                 <div id="move-counter" class="info-line">0 / 200</div>
-                <button id="pass-btn">한수 쉼</button>
+                <button id="pass-btn">한수 넘기기</button>
+                <button id="undo-btn">한수 무르기</button>
                 <button id="reset-btn">새 게임</button>
                 <div id="status-message"></div>
             </div>
