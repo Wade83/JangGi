@@ -12,16 +12,19 @@
     <!-- User Selection Modal -->
     <div id="user-modal" class="modal">
         <div class="modal-content">
-            <h2>사용자 선택</h2>
-            <div class="formation-section">
-                <h3>등록된 사용자</h3>
+            <h2 id="user-modal-title">사용자 선택</h2>
+            <div id="user-list-section" class="formation-section">
                 <div id="user-list" class="user-list"></div>
                 <div id="no-user" class="info-line">등록된 사용자가 없습니다.</div>
             </div>
-            <div class="formation-section">
-                <h3>새 사용자 등록</h3>
+            <button id="show-register-btn" type="button" class="start-btn">새 사용자 등록</button>
+            <div id="register-form" class="formation-section" style="display: none;">
                 <div class="profile-row">
+                    <label>이름:</label>
                     <input type="text" id="new-user-name" class="profile-input" placeholder="이름 입력">
+                </div>
+                <div class="profile-row">
+                    <label>급수:</label>
                     <select id="new-user-grade" class="difficulty-select">
                         <option value="1">18급</option>
                         <option value="2">17급</option>
@@ -51,7 +54,24 @@
                         <option value="26">8단</option>
                         <option value="27">9단</option>
                     </select>
-                    <button id="add-user-btn" type="button" class="start-btn slim">사용자 등록</button>
+                </div>
+                <div class="profile-row">
+                    <label>선호 포진:</label>
+                    <select id="new-user-formation" class="difficulty-select">
+                        <option value="0">마상상마</option>
+                        <option value="1">마상마상</option>
+                        <option value="2">상마마상</option>
+                        <option value="3">상마상마</option>
+                    </select>
+                </div>
+                <div class="profile-row">
+                    <label>AI 지연시간 (초):</label>
+                    <input type="number" id="new-user-delay" class="difficulty-select" min="0" max="5" value="2"
+                        step="0.5">
+                </div>
+                <div class="button-row">
+                    <button id="add-user-btn" type="button" class="start-btn">등록</button>
+                    <button id="cancel-register-btn" type="button" class="start-btn">취소</button>
                 </div>
                 <div class="info-line" id="user-limit-msg"></div>
             </div>
@@ -197,6 +217,87 @@
         </div>
     </div>
 
+    <!-- User Edit Modal -->
+    <div id="user-edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>사용자 정보 수정</h2>
+            <div class="formation-section">
+                <div class="profile-row">
+                    <label>이름:</label>
+                    <input type="text" id="edit-user-name" class="profile-input" disabled>
+                </div>
+                <div class="profile-row">
+                    <label>급수:</label>
+                    <select id="edit-user-grade" class="difficulty-select" disabled>
+                        <option value="1">18급</option>
+                        <option value="2">17급</option>
+                        <option value="3">16급</option>
+                        <option value="4">15급</option>
+                        <option value="5">14급</option>
+                        <option value="6">13급</option>
+                        <option value="7">12급</option>
+                        <option value="8">11급</option>
+                        <option value="9">10급</option>
+                        <option value="10">9급</option>
+                        <option value="11">8급</option>
+                        <option value="12">7급</option>
+                        <option value="13">6급</option>
+                        <option value="14">5급</option>
+                        <option value="15">4급</option>
+                        <option value="16">3급</option>
+                        <option value="17">2급</option>
+                        <option value="18">1급</option>
+                        <option value="19">1단</option>
+                        <option value="20">2단</option>
+                        <option value="21">3단</option>
+                        <option value="22">4단</option>
+                        <option value="23">5단</option>
+                        <option value="24">6단</option>
+                        <option value="25">7단</option>
+                        <option value="26">8단</option>
+                        <option value="27">9단</option>
+                    </select>
+                </div>
+                <div class="profile-row">
+                    <label>선호 포진:</label>
+                    <select id="edit-user-formation" class="difficulty-select">
+                        <option value="0">마상상마</option>
+                        <option value="1">마상마상</option>
+                        <option value="2">상마마상</option>
+                        <option value="3">상마상마</option>
+                    </select>
+                </div>
+                <div class="profile-row">
+                    <label>AI 지연시간 (초):</label>
+                    <input type="number" id="edit-user-delay" class="difficulty-select" min="0" max="5" step="0.5">
+                </div>
+                <div class="button-row">
+                    <button id="save-user-btn" type="button" class="start-btn">저장</button>
+                    <button id="cancel-edit-btn" type="button" class="start-btn">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post-Game Result Modal -->
+    <div id="result-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="result-title">게임 결과</h2>
+            <div class="formation-section">
+                <div class="result-display">
+                    <div id="result-outcome" class="result-outcome"></div>
+                    <div id="result-xp" class="result-xp"></div>
+                    <div id="result-rank" class="result-rank"></div>
+                </div>
+                <div class="button-row">
+                    <button id="next-game-btn" type="button" class="start-btn">다음 게임</button>
+                    <button id="exit-game-btn" type="button" class="start-btn">종료</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="user-manager.js"></script>
     <script src="sounds.js"></script>
     <script src="script.js"></script>
     <script src="ai.js"></script>

@@ -97,8 +97,11 @@ class JanggiGame {
         this.aiDifficulty = 3;
         this.aiDelay = 1000; // Default 1 second
         this.moveHistory = []; // Track move history for undo
-        this.profiles = this.loadProfiles();
-        this.profile = this.profiles[0] || {
+
+        // Initialize UserManager
+        this.userManager = new UserManager();
+        this.currentUser = null;
+        this.profile = {
             name: '',
             grade: 1,
             exp: 0,
@@ -130,84 +133,109 @@ class JanggiGame {
 
     getGradeLabel(idx) {
         const labels = [
-            '18급','17급','16급','15급','14급','13급','12급','11급','10급',
-            '9급','8급','7급','6급','5급','4급','3급','2급','1급',
-            '1단','2단','3단','4단','5단','6단','7단','8단','9단'
+            '18급', '17급', '16급', '15급', '14급', '13급', '12급', '11급', '10급',
+            '9급', '8급', '7급', '6급', '5급', '4급', '3급', '2급', '1급',
+            '1단', '2단', '3단', '4단', '5단', '6단', '7단', '8단', '9단'
         ];
         return labels[idx - 1] || `레벨 ${idx}`;
     }
 
-    loadProfiles() {
-        try {
-            const raw = localStorage.getItem('janggiProfiles');
-            if (raw) return JSON.parse(raw);
-        } catch (e) { }
-        return [];
-    }
-
-    saveProfiles() {
-        try {
-            localStorage.setItem('janggiProfiles', JSON.stringify(this.profiles));
-        } catch (e) { }
-    }
+    // Removed loadProfiles() and saveProfiles() - now using UserManager
 
     setupUserModal() {
         const listEl = document.getElementById('user-list');
         const noUserEl = document.getElementById('no-user');
+        const userListSection = document.getElementById('user-list-section');
+        const modalTitle = document.getElementById('user-modal-title');
+        const showRegisterBtn = document.getElementById('show-register-btn');
+        const registerForm = document.getElementById('register-form');
         const nameInput = document.getElementById('new-user-name');
         const gradeSelect = document.getElementById('new-user-grade');
+        const formationInput = document.getElementById('new-user-formation');
+        const delayInput = document.getElementById('new-user-delay');
         const addBtn = document.getElementById('add-user-btn');
+        const cancelRegisterBtn = document.getElementById('cancel-register-btn');
         const limitMsg = document.getElementById('user-limit-msg');
+
+        // Show/hide registration form
+        if (showRegisterBtn) {
+            showRegisterBtn.addEventListener('click', () => {
+                if (registerForm) registerForm.style.display = 'block';
+                if (userListSection) userListSection.style.display = 'none';
+                if (modalTitle) modalTitle.textContent = '사용자 등록';
+                showRegisterBtn.style.display = 'none';
+            });
+        }
+
+        if (cancelRegisterBtn) {
+            cancelRegisterBtn.addEventListener('click', () => {
+                if (registerForm) registerForm.style.display = 'none';
+                if (userListSection) userListSection.style.display = 'block';
+                if (modalTitle) modalTitle.textContent = '사용자 선택';
+                if (showRegisterBtn) showRegisterBtn.style.display = 'block';
+                // Reset form
+                if (nameInput) nameInput.value = '';
+                if (gradeSelect) gradeSelect.value = '1';
+                if (formationInput) formationInput.value = '0';
+                if (delayInput) delayInput.value = '2';
+                if (limitMsg) limitMsg.textContent = '';
+            });
+        }
 
         const renderList = () => {
             if (!listEl) return;
             listEl.innerHTML = '';
-            const hasUsers = this.profiles.length > 0;
+            const users = this.userManager.getAllUsers();
+            const hasUsers = users.length > 0;
             if (noUserEl) noUserEl.style.display = hasUsers ? 'none' : 'block';
-            if (limitMsg) limitMsg.textContent = this.profiles.length >= 10 ? '등록 인원은 최대 10명입니다.' : '';
-            this.profiles.forEach(p => {
+            if (limitMsg) limitMsg.textContent = users.length >= 10 ? '등록 인원은 최대 10명입니다.' : '';
+
+            users.forEach(user => {
                 const item = document.createElement('div');
                 item.className = 'user-item';
+
                 const nameDiv = document.createElement('div');
-                nameDiv.textContent = `${p.name} (${this.getGradeLabel(p.grade)})`;
+                const rankInfo = this.userManager.getRankInfo(user.rank);
+                nameDiv.textContent = `${user.name} (${rankInfo.name})`;
+
                 const recordDiv = document.createElement('div');
-                recordDiv.textContent = `전적 ${p.wins || 0}승 ${p.losses || 0}패`;
+                recordDiv.textContent = `전적 ${user.wins}승 ${user.losses}패`;
+
                 const actions = document.createElement('div');
                 actions.className = 'actions';
+
                 const selectBtn = document.createElement('button');
                 selectBtn.className = 'start-btn';
                 selectBtn.textContent = '선택';
                 selectBtn.addEventListener('click', () => {
-                    this.profile = { ...p };
+                    this.currentUser = this.userManager.setCurrentUser(user.id);
                     this.updateProfileDisplay();
                     this.hideUserModal();
                     this.showFormationModal();
                 });
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'start-btn slim';
+                editBtn.textContent = '편집';
+                editBtn.addEventListener('click', () => {
+                    this.showEditModal(user);
+                });
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'start-btn slim';
                 deleteBtn.textContent = '삭제';
                 deleteBtn.addEventListener('click', () => {
-                    if (confirm(`${p.name} 프로필을 삭제할까요?`)) {
-                        this.profiles = this.profiles.filter(x => x.name !== p.name);
-                        if (this.profile && this.profile.name === p.name) {
-                            this.profile = this.profiles[0] || {
-                                name: '',
-                                grade: 1,
-                                exp: 0,
-                                wins: 0,
-                                losses: 0,
-                                highestGrade: 1
-                            };
-                            this.updateProfileDisplay();
-                        }
-                        this.saveProfiles();
+                    if (confirm(`${user.name} 프로필을 삭제할까요?`)) {
+                        this.userManager.deleteUser(user.id);
                         renderList();
-                        if (this.profiles.length === 0) {
+                        if (this.userManager.getAllUsers().length === 0) {
                             this.showUserModal();
                         }
                     }
                 });
+
                 actions.appendChild(selectBtn);
+                actions.appendChild(editBtn);
                 actions.appendChild(deleteBtn);
                 item.appendChild(nameDiv);
                 item.appendChild(recordDiv);
@@ -218,32 +246,44 @@ class JanggiGame {
 
         if (addBtn) {
             addBtn.addEventListener('click', () => {
-                if (this.profiles.length >= 10) {
+                const users = this.userManager.getAllUsers();
+                if (users.length >= 10) {
                     if (limitMsg) limitMsg.textContent = '등록 인원은 최대 10명입니다.';
                     return;
                 }
+
                 const name = nameInput ? nameInput.value.trim() : '';
-                const grade = gradeSelect ? parseInt(gradeSelect.value) : 1;
+                const rank = gradeSelect ? parseInt(gradeSelect.value) : 1;
+                const formation = formationInput ? parseInt(formationInput.value) : 0;
+                const delay = delayInput ? parseFloat(delayInput.value) : 2;
+
                 if (!name) {
                     alert('이름을 입력해 주세요.');
                     return;
                 }
-                if (this.profiles.some(p => p.name === name)) {
+
+                if (users.some(u => u.name === name)) {
                     alert('이미 동일한 이름의 사용자가 있습니다.');
                     return;
                 }
-                const newProfile = {
-                    name,
-                    grade: grade || 1,
-                    exp: 0,
-                    wins: 0,
-                    losses: 0,
-                    highestGrade: grade || 1
-                };
-                this.profiles.push(newProfile);
-                this.saveProfiles();
+
+                // Create user with initial rank and XP (same formation for both sides)
+                const newUser = this.userManager.createUser(name, formation, formation, delay);
+                newUser.rank = rank;
+                const rankInfo = this.userManager.getRankInfo(rank);
+                newUser.experience = rankInfo.xpRequired;
+                this.userManager.updateUser(newUser.id, newUser);
+
                 renderList();
+                // Reset form and hide
                 if (nameInput) nameInput.value = '';
+                if (gradeSelect) gradeSelect.value = '1';
+                if (formationInput) formationInput.value = '0';
+                if (delayInput) delayInput.value = '2';
+                if (registerForm) registerForm.style.display = 'none';
+                if (userListSection) userListSection.style.display = 'block';
+                if (modalTitle) modalTitle.textContent = '사용자 선택';
+                if (showRegisterBtn) showRegisterBtn.style.display = 'block';
             });
         }
 
@@ -264,31 +304,73 @@ class JanggiGame {
         if (this.userModalElement) this.userModalElement.classList.add('hidden');
         if (this.formationModalElement) this.formationModalElement.classList.remove('hidden');
         this.updateProfileDisplay();
+        // Re-setup formation modal with current user settings
+        this.setupFormationModal();
+    }
+
+    showEditModal(user) {
+        const editModal = document.getElementById('user-edit-modal');
+        const editName = document.getElementById('edit-user-name');
+        const editGrade = document.getElementById('edit-user-grade');
+        const editFormation = document.getElementById('edit-user-formation');
+        const editDelay = document.getElementById('edit-user-delay');
+        const saveBtn = document.getElementById('save-user-btn');
+        const cancelBtn = document.getElementById('cancel-edit-btn');
+
+        if (!editModal) return;
+
+        // Set current values
+        if (editName) editName.value = user.name;
+        const rankInfo = this.userManager.getRankInfo(user.rank);
+        if (editGrade) editGrade.value = user.rank;
+        if (editFormation) editFormation.value = user.preferredFormation.cho; // Use cho as the single formation
+        if (editDelay) editDelay.value = user.aiDelay;
+
+        // Remove old listeners
+        const newSaveBtn = saveBtn.cloneNode(true);
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+        // Save handler
+        newSaveBtn.addEventListener('click', () => {
+            const formation = parseInt(editFormation.value);
+            const updates = {
+                preferredFormation: {
+                    cho: formation,
+                    han: formation  // Same formation for both sides
+                },
+                aiDelay: parseFloat(editDelay.value)
+            };
+            this.userManager.updateUser(user.id, updates);
+            editModal.classList.add('hidden');
+            // Refresh user list
+            this.setupUserModal();
+        });
+
+        // Cancel handler
+        newCancelBtn.addEventListener('click', () => {
+            editModal.classList.add('hidden');
+        });
+
+        editModal.classList.remove('hidden');
     }
 
     updateProfileDisplay() {
-        if (!this.profile) return;
-        const { name, grade, exp, wins, losses } = this.profile;
-        const nextThreshold = this.getNextExpThreshold(grade);
-        const thresholdText = (nextThreshold === null || nextThreshold === Infinity) ? 'MAX' : nextThreshold;
+        if (!this.currentUser) return;
+        const { name, rank, experience, wins, losses } = this.currentUser;
+        const rankInfo = this.userManager.getRankInfo(rank);
+        const nextRankInfo = this.userManager.getRankInfo(rank + 1);
+        const nextThreshold = nextRankInfo ? nextRankInfo.xpRequired : 'MAX';
+
         if (this.profileNameDisplay) this.profileNameDisplay.textContent = `이름: ${name || '-'}`;
-        if (this.profileGradeDisplay) this.profileGradeDisplay.textContent = `급수: ${this.getGradeLabel(grade)}`;
+        if (this.profileGradeDisplay) this.profileGradeDisplay.textContent = `레벨: ${rankInfo.name}`;
         if (this.profileExpDisplay) {
-            const nextText = thresholdText === 'MAX' ? `${exp} / MAX` : `${exp} / ${thresholdText}`;
+            const nextText = nextThreshold === 'MAX' ? `${experience} / MAX` : `${experience} / ${nextThreshold}`;
             this.profileExpDisplay.textContent = `EXP: ${nextText}`;
         }
         if (this.profileRecordDisplay) {
             this.profileRecordDisplay.textContent = `전적: ${wins}승 ${losses}패`;
-        }
-        const nameInput = document.getElementById('player-name');
-        if (nameInput && nameInput.value !== (name || '')) {
-            nameInput.value = name || '';
-        }
-        // Reflect grade to difficulty select if available
-        const diffSelect = document.getElementById('ai-difficulty');
-        const depth = this.gradeIndexToDepth(grade);
-        if (diffSelect && diffSelect.value !== String(depth)) {
-            diffSelect.value = String(depth);
         }
     }
 
@@ -303,43 +385,88 @@ class JanggiGame {
     }
 
     applyResultToProfile(outcome) {
-        if (!this.profile) return;
-        const diff = this.aiDifficulty - this.profile.grade;
-        let delta = 0;
-        if (outcome === 'win') {
-            delta = 100 + Math.max(0, diff) * 40;
-            this.profile.wins += 1;
-        } else if (outcome === 'loss') {
-            delta = -60 - Math.max(0, -diff) * 20;
-            this.profile.losses += 1;
-        } else {
-            delta = 40;
-        }
-        this.profile.exp = Math.max(0, this.profile.exp + delta);
-        this.recalculateGrade();
-        const idx = this.profiles.findIndex(p => p.name === this.profile.name);
-        if (idx >= 0) this.profiles[idx] = this.profile;
-        else this.profiles.push(this.profile);
-        this.saveProfiles();
+        if (!this.currentUser) return;
+
+        const won = outcome === 'win';
+        const result = this.userManager.recordGameResult(this.currentUser, won);
+
+        // Update current user reference
+        this.currentUser = this.userManager.getUser(this.currentUser.id);
         this.updateProfileDisplay();
+
+        // Show result modal
+        this.showResultModal(won, result);
     }
 
-    recalculateGrade() {
-        const thresholds = [
-            0, 150, 320, 500, 700, 920, 1150, 1400, 1660, 1930,
-            2210, 2500, 2800, 3110, 3430, 3760, 4100, 4450, 4810,
-            5180, 5560, 5950, 6350, 6760, 7180, 7610, 8050, 8500, Infinity
-        ];
-        let newGrade = this.profile.grade;
-        while (newGrade < 27 && this.profile.exp >= thresholds[newGrade]) {
-            newGrade += 1;
+    showResultModal(won, result) {
+        const resultModal = document.getElementById('result-modal');
+        const resultTitle = document.getElementById('result-title');
+        const resultOutcome = document.getElementById('result-outcome');
+        const resultXP = document.getElementById('result-xp');
+        const resultRank = document.getElementById('result-rank');
+        const nextGameBtn = document.getElementById('next-game-btn');
+        const exitGameBtn = document.getElementById('exit-game-btn');
+
+        if (!resultModal) return;
+
+        // Set result content
+        if (resultTitle) {
+            resultTitle.textContent = won ? '승리!' : '패배';
+            resultTitle.style.color = won ? '#2ecc71' : '#e74c3c';
         }
-        while (newGrade > 1 && this.profile.exp < thresholds[newGrade - 1]) {
-            newGrade -= 1;
+
+        if (resultOutcome) {
+            resultOutcome.textContent = won ? '🎉 축하합니다! 승리하셨습니다!' : '😔 아쉽게 패배하셨습니다.';
+            resultOutcome.style.fontSize = '24px';
+            resultOutcome.style.marginBottom = '20px';
         }
-        this.profile.grade = newGrade;
-        this.profile.highestGrade = Math.max(this.profile.highestGrade || newGrade, newGrade);
+
+        if (resultXP) {
+            const xpText = result.xpChange > 0 ? `+${result.xpChange}` : `${result.xpChange}`;
+            resultXP.textContent = `경험치: ${xpText} (총 ${result.newXP} XP)`;
+            resultXP.style.fontSize = '18px';
+            resultXP.style.color = result.xpChange > 0 ? '#2ecc71' : '#e74c3c';
+        }
+
+        if (resultRank) {
+            const oldRankInfo = this.userManager.getRankInfo(result.oldRank);
+            const newRankInfo = this.userManager.getRankInfo(result.newRank);
+
+            if (result.rankChanged) {
+                const direction = result.newRank > result.oldRank ? '승급' : '강등';
+                resultRank.textContent = `${direction}! ${oldRankInfo.name} → ${newRankInfo.name}`;
+                resultRank.style.fontSize = '20px';
+                resultRank.style.color = '#f39c12';
+                resultRank.style.fontWeight = 'bold';
+            } else {
+                resultRank.textContent = `현재 급수: ${newRankInfo.name}`;
+                resultRank.style.fontSize = '18px';
+                resultRank.style.color = '#ecf0f1';
+            }
+        }
+
+        // Remove old event listeners
+        const newNextBtn = nextGameBtn.cloneNode(true);
+        const newExitBtn = exitGameBtn.cloneNode(true);
+        nextGameBtn.parentNode.replaceChild(newNextBtn, nextGameBtn);
+        exitGameBtn.parentNode.replaceChild(newExitBtn, exitGameBtn);
+
+        // Next game handler
+        newNextBtn.addEventListener('click', () => {
+            resultModal.classList.add('hidden');
+            this.showFormationModal();
+        });
+
+        // Exit handler
+        newExitBtn.addEventListener('click', () => {
+            resultModal.classList.add('hidden');
+            this.setupUserModal(); // Refresh user list with updated stats
+        });
+
+        resultModal.classList.remove('hidden');
     }
+
+    // Removed recalculateGrade() - now using UserManager
 
     onGameEnd(winnerSide) {
         if (this.resultProcessed) return;
@@ -384,72 +511,88 @@ class JanggiGame {
         const formationBtns = document.querySelectorAll('.formation-btn');
         const sideBtns = document.querySelectorAll('.side-btn');
         const difficultySelect = document.getElementById('ai-difficulty');
+        const delayInput = document.getElementById('ai-delay');
 
-        // Default formations pre-selected
-        this.setDefaultFormations();
-        // Prefill difficulty based on current profile
-        const depth = this.gradeIndexToDepth(this.profile.grade);
-        if (difficultySelect) {
-            difficultySelect.value = String(depth);
-            this.aiDifficulty = depth;
+        if (!this.currentUser) {
+            return;
         }
 
-        // Side selection
+        // Auto-configure based on user profile
+        // 1. Set AI difficulty based on user rank
+        const aiDifficulty = this.userManager.getAIDifficulty(this.currentUser.rank);
+        this.aiDifficulty = aiDifficulty;
+        if (difficultySelect) {
+            difficultySelect.value = String(aiDifficulty);
+            difficultySelect.disabled = true; // Disable manual selection
+            const rankInfo = this.userManager.getRankInfo(this.currentUser.rank);
+            this.difficultyDisplayElement.textContent = `난이도: 레벨${aiDifficulty} (${rankInfo.name})`;
+        }
+
+        // 2. Set AI delay from user preference
+        if (delayInput) {
+            delayInput.value = this.currentUser.aiDelay;
+            this.aiDelay = this.currentUser.aiDelay * 1000;
+        }
+
+        // 3. Auto-select player side (alternating)
+        const nextSide = this.userManager.getNextSide(this.currentUser);
+        this.playerSide = nextSide;
         sideBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                sideBtns.forEach(b => b.classList.remove('selected'));
+            btn.classList.remove('selected');
+            btn.disabled = true; // Disable manual selection
+            if (btn.dataset.side === nextSide) {
                 btn.classList.add('selected');
-                this.playerSide = btn.dataset.side;
-                this.checkStartReady();
-            });
-        });
-
-        // Difficulty selection
-        difficultySelect.addEventListener('change', () => {
-            this.aiDifficulty = parseInt(difficultySelect.value);
-        });
-
-        // Formation selection
-        formationBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const side = btn.dataset.side;
-                const formation = parseInt(btn.dataset.formation);
-
-                document.querySelectorAll(`.formation-btn[data-side="${side}"]`).forEach(b => {
-                    b.classList.remove('selected');
-                });
-
-                btn.classList.add('selected');
-                this.formations[side] = formation;
-                this.checkStartReady();
-            });
-        });
-
-        startBtn.addEventListener('click', () => {
-            if (!this.profile || !this.profile.name) {
-                alert('사용자를 먼저 선택해 주세요.');
-                this.showUserModal();
-                return;
             }
+        });
+
+        // 4. Set player's preferred formation
+        const playerFormation = this.currentUser.preferredFormation[nextSide];
+        this.formations[nextSide] = playerFormation;
+
+        // 5. Set random AI formation
+        const aiSideStr = nextSide === 'cho' ? 'han' : 'cho';
+        const aiFormation = this.userManager.getRandomFormation();
+        this.formations[aiSideStr] = aiFormation;
+
+        // Disable all formation buttons and select appropriate ones
+        formationBtns.forEach(btn => {
+            btn.classList.remove('selected');
+            btn.disabled = true; // Disable manual selection
+            const side = btn.dataset.side;
+            const formation = parseInt(btn.dataset.formation);
+
+            if (side === nextSide && formation === playerFormation) {
+                btn.classList.add('selected');
+            } else if (side === aiSideStr && formation === aiFormation) {
+                btn.classList.add('selected');
+            }
+        });
+
+        // Enable start button
+        if (startBtn) {
+            startBtn.disabled = false;
+        }
+
+        // Start button handler
+        const newStartBtn = startBtn.cloneNode(true);
+        startBtn.parentNode.replaceChild(newStartBtn, startBtn);
+
+        // 5-second auto-start countdown
+        let countdown = 5;
+        let countdownInterval = null;
+        let autoStartTimeout = null;
+
+        const startGame = () => {
+            // Clear timers
+            if (countdownInterval) clearInterval(countdownInterval);
+            if (autoStartTimeout) clearTimeout(autoStartTimeout);
+
             modal.classList.add('hidden');
 
-            // Get configured delay
-            const delayInput = document.getElementById('ai-delay');
-            if (delayInput) {
-                this.aiDelay = parseFloat(delayInput.value) * 1000;
-                // Clamp between 0 and 5000ms
-                this.aiDelay = Math.max(0, Math.min(5000, this.aiDelay));
-            }
-
-            // Update difficulty display
-            if (this.difficultyDisplayElement) {
-                const diffText = difficultySelect.options[difficultySelect.selectedIndex].text;
-                this.difficultyDisplayElement.textContent = `난이도: ${diffText}`;
-            }
+            // Record side choice for alternation
+            this.userManager.recordSide(this.currentUser, nextSide);
 
             const aiSide = this.playerSide === 'cho' ? SIDE.HAN : SIDE.CHO;
-            const selectedDepth = parseInt(difficultySelect.value) || this.gradeIndexToDepth(this.profile.grade);
-            this.aiDifficulty = selectedDepth;
             const searchDepth = this.getDepthForDifficulty(this.aiDifficulty);
             this.ai = new AI(this, aiSide, searchDepth);
             this.turn = SIDE.CHO;
@@ -461,15 +604,45 @@ class JanggiGame {
             this.lastMoveCapture = false;
             this.lastMoveCheck = false;
             this.passUsed = { cho: false, han: false };
+            this.moveHistory = [];
             this.boardElement.style.pointerEvents = "auto";
             this.updateScoreboard();
             this.updateStatus("초의 차례입니다");
+
             // If AI is cho (player is han), AI moves first
             if (aiSide === SIDE.CHO) {
                 setTimeout(() => {
                     this.ai.makeMove();
                 }, 500);
             }
+        };
+
+        // Update button text with countdown
+        const updateButtonText = () => {
+            newStartBtn.textContent = `대국 시작 (${countdown}초)`;
+        };
+
+        updateButtonText();
+
+        // Start countdown
+        countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                updateButtonText();
+            } else {
+                clearInterval(countdownInterval);
+                startGame();
+            }
+        }, 1000);
+
+        // Auto-start after 5 seconds
+        autoStartTimeout = setTimeout(() => {
+            startGame();
+        }, 5000);
+
+        // Manual start on click
+        newStartBtn.addEventListener('click', () => {
+            startGame();
         });
     }
 
@@ -545,7 +718,6 @@ class JanggiGame {
         this.boardElement.style.pointerEvents = 'none';
         this.gameOver = true;
         this.onGameEnd(winnerSide);
-        setTimeout(() => alert(message), 100);
         return true;
     }
 
@@ -565,6 +737,12 @@ class JanggiGame {
     }
     initBoard(choFormation = 0, hanFormation = 0) {
         this.board = Array(BOARD_ROWS).fill(null).map(() => Array(BOARD_COLS).fill(null));
+
+        // Clear captured pieces containers
+        const capturedChoContainer = document.getElementById('captured-cho');
+        const capturedHanContainer = document.getElementById('captured-han');
+        if (capturedChoContainer) capturedChoContainer.innerHTML = '';
+        if (capturedHanContainer) capturedHanContainer.innerHTML = '';
 
         const formationPatterns = [
             [PIECE_TYPE.MA, PIECE_TYPE.SANG, PIECE_TYPE.SANG, PIECE_TYPE.MA],
@@ -1173,7 +1351,6 @@ class JanggiGame {
             this.boardElement.style.pointerEvents = 'none';
             this.soundManager.playGameOver(this.turn !== SIDE.CHO);
             this.onGameEnd(winnerSide);
-            setTimeout(() => alert(`외통수! ${winner} 승리!`), 100);
         } else if (this.isCheck(this.turn)) {
             const player = this.turn === SIDE.CHO ? '초' : '한';
             this.updateStatus(`${player} 장군!`);
